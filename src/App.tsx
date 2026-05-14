@@ -17,7 +17,7 @@ import { downloadBlob } from "@/lib/downloadBlob";
 
 export default function App() {
   const { settings, setSettings, resetSettings } = useSettings();
-  const { content, setContent, replaceContent, saveState } = useDocument();
+  const { content, setContent, replaceContent, flushSave, saveState } = useDocument();
   const { images, imageUrls, ready, addImage, removeImage, getImageBlobUrl } = useImages();
   const aiGeneration = useAiGeneration(settings);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -47,6 +47,7 @@ export default function App() {
     setExportMessage(null);
 
     try {
+      flushSave(normalizeEditorMarkdown(content));
       await exportDocx(normalizeEditorMarkdown(content), settings, browserImageProvider);
       setExportStatus("success");
       setExportMessage("Документ скачан.");
@@ -100,8 +101,22 @@ export default function App() {
   );
 
   const handleSaveMarkdown = useCallback(() => {
-    downloadBlob(new Blob([normalizeEditorMarkdown(content)], { type: "text/markdown;charset=utf-8" }), "document.md");
-  }, [content]);
+    const markdown = normalizeEditorMarkdown(content);
+    flushSave(markdown);
+    downloadBlob(new Blob([markdown], { type: "text/markdown;charset=utf-8" }), "document.md");
+  }, [content, flushSave]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        handleSaveMarkdown();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSaveMarkdown]);
 
   return (
     <div
@@ -122,7 +137,9 @@ export default function App() {
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-bold text-gray-900">Gostify</h1>
           <span className="text-xs text-gray-400">веб-версия</span>
-          <span className="text-xs text-gray-400">{saveState === "saving" ? "Сохранение..." : "Сохранено"}</span>
+          <span className="text-xs text-gray-400">
+            {saveState === "saving" ? "Сохранение..." : saveState === "pending" ? "Изменено" : "Сохранено"}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <input

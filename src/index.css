@@ -3,6 +3,25 @@
 @import "@milkdown/theme-nord/style.css";
 
 :root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border-token: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
   --text-primary: #111827;
@@ -13,13 +32,32 @@
 }
 
 .dark {
-  --bg-primary: #1f2937;
-  --bg-secondary: #111827;
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --border: #374151;
-  --editor-bg: #111827;
-  --editor-code-bg: #1f2937;
+  --background: #252523;
+  --foreground: oklch(0.985 0 0);
+  --card: #2c2c2a;
+  --card-foreground: oklch(0.985 0 0);
+  --popover: #2c2c2a;
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: #2f2f2d;
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: #2f2f2d;
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border-token: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+
+  --bg-primary: var(--card);
+  --bg-secondary: var(--background);
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --border: var(--border-token);
+  --editor-bg: var(--card);
+  --editor-code-bg: var(--muted);
   color-scheme: dark;
 }
 
@@ -37,7 +75,17 @@ body {
 }
 
 .dark .bg-gray-100 {
-  background-color: #374151 !important;
+  background-color: var(--accent) !important;
+}
+
+.dark .bg-gray-900 {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.dark .bg-gray-200,
+.dark .bg-gray-300 {
+  background-color: var(--muted) !important;
 }
 
 .dark .text-gray-900,
@@ -60,9 +108,13 @@ body {
 .dark input,
 .dark select,
 .dark textarea {
-  background: #111827;
-  border-color: var(--border);
+  background: var(--background);
+  border-color: var(--input);
   color: var(--text-primary);
+}
+
+.dark button:hover {
+  background-color: var(--accent);
 }
 
 .milkdown-editor {
@@ -76,6 +128,8 @@ body {
     margin: 0 auto;
     padding: 1rem 1rem 50vh;
     background: var(--editor-bg);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
     color: var(--text-primary);
 
     @media (min-width: 640px) {
@@ -127,9 +181,9 @@ body {
     }
 
     blockquote {
-      border-left: 4px solid #d1d5db;
+      border-left: 4px solid var(--border);
       padding-left: 1em;
-      color: #6b7280;
+      color: var(--text-secondary);
     }
 
     table {
@@ -137,7 +191,7 @@ body {
       width: 100%;
 
       td, th {
-        border: 1px solid #d1d5db;
+        border: 1px solid var(--border);
         padding: 6px 12px;
         text-align: left;
       }
@@ -150,7 +204,7 @@ body {
 
     hr {
       border: none;
-      border-top: 2px dashed #d1d5db;
+      border-top: 2px dashed var(--border);
       margin: 1.5em 0;
       position: relative;
 
@@ -183,8 +237,8 @@ body {
 
 .img-placeholder {
   border-radius: 4px;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--accent);
+  color: var(--accent-foreground);
   font-weight: 600;
   padding: 0 0.2rem;
 }
