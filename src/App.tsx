@@ -108,15 +108,29 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      if ((event.ctrlKey || event.metaKey) && event.code === "KeyS") {
         event.preventDefault();
-        handleSaveMarkdown();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        flushSave(normalizeEditorMarkdown(content));
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleSaveMarkdown]);
+    const handleEditorSave = () => flushSave(normalizeEditorMarkdown(content));
+
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.documentElement.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.body?.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("gostify-save", handleEditorSave);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.documentElement.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.body?.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("gostify-save", handleEditorSave);
+    };
+  }, [content, flushSave]);
 
   return (
     <div

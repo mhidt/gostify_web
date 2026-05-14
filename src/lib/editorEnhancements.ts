@@ -175,6 +175,22 @@ export const pageBreakPlugin = $prose(() =>
   }),
 );
 
+export const saveShortcutPlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("save-shortcut"),
+    props: {
+      handleKeyDown(_view, event) {
+        if (!(event.ctrlKey || event.metaKey) || event.code !== "KeyS") return false;
+
+        event.preventDefault();
+        event.stopPropagation();
+        window.dispatchEvent(new CustomEvent("gostify-save"));
+        return true;
+      },
+    },
+  }),
+);
+
 export const changeCasePlugin = $prose(() =>
   new Plugin({
     key: new PluginKey("change-case-shortcut"),
@@ -225,6 +241,7 @@ export const editorEnhancementPlugins = [
   smartQuotesPlugin,
   headingMarkerPlugin,
   pageBreakPlugin,
+  saveShortcutPlugin,
   changeCasePlugin,
   imagePlaceholderPlugin,
 ];
