@@ -3,7 +3,10 @@ import { MilkdownEditor } from "@/components/Editor/MilkdownEditor";
 import { EditorToolbar } from "@/components/Editor/EditorToolbar";
 import { ImageManager } from "@/components/Editor/ImageManager";
 import { AiPanel } from "@/components/Ai/AiPanel";
+import AiContextMenu from "@/components/Ai/AiContextMenu";
 import type { ExportStatus } from "@/components/Editor/ExportButton";
+import { Header } from "@/components/Layout/Header";
+import { StatusBar } from "@/components/Layout/StatusBar";
 import { SettingsPanel } from "@/components/Settings/SettingsPanel";
 import { useSettings } from "@/hooks/useSettings";
 import { useDocument } from "@/hooks/useDocument";
@@ -28,6 +31,7 @@ export default function App() {
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [documentVersion, setDocumentVersion] = useState(0);
+  const [aiContextMenu, setAiContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("gostify-theme");
     if (saved === "light" || saved === "dark") return saved;
@@ -106,6 +110,18 @@ export default function App() {
     downloadBlob(new Blob([markdown], { type: "text/markdown;charset=utf-8" }), "document.md");
   }, [content, flushSave]);
 
+  const handleAiContextMenu = useCallback((position: { x: number; y: number }) => {
+    setAiContextMenu(position);
+  }, []);
+
+  const runContextGeneration = useCallback(
+    (mode: "full" | "partial") => {
+      setAiOpen(true);
+      void aiGeneration.generate(mode, editorAdapter);
+    },
+    [aiGeneration, editorAdapter],
+  );
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.code === "KeyS") {
@@ -147,52 +163,15 @@ export default function App() {
         void openMarkdownFile(file);
       }}
     >
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold text-gray-900">Gostify</h1>
-          <span className="text-xs text-gray-400">веб-версия</span>
-          <span className="text-xs text-gray-400">
-            {saveState === "saving" ? "Сохранение..." : saveState === "pending" ? "Изменено" : "Сохранено"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".md,.txt,text/markdown,text/plain"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void openMarkdownFile(file);
-              event.target.value = "";
-            }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            Открыть
-          </button>
-          <button
-            onClick={handleSaveMarkdown}
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            Сохранить .md
-          </button>
-          <button
-            onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            {theme === "dark" ? "Светлая" : "Темная"}
-          </button>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            Настройки
-          </button>
-        </div>
-      </header>
+      <Header
+        fileInputRef={fileInputRef}
+        saveState={saveState}
+        theme={theme}
+        onOpenMarkdown={(file) => void openMarkdownFile(file)}
+        onSaveMarkdown={handleSaveMarkdown}
+        onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
       <EditorToolbar
         onExportDocx={handleExport}
@@ -214,20 +193,24 @@ export default function App() {
             onUploadImage={handleUploadImage}
             registerImageInserter={registerImageInserter}
             registerEditorAdapter={registerEditorAdapter}
+            onAiContextMenu={handleAiContextMenu}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-gray-500">Загрузка редактора...</div>
         )}
       </main>
 
-      {exportMessage && (
-        <div
-          className={`absolute bottom-4 right-4 z-30 rounded-md px-4 py-2 text-sm font-medium shadow-lg ${
-            exportStatus === "error" ? "bg-red-600 text-white" : "bg-gray-900 text-white"
-          }`}
-        >
-          {exportMessage}
-        </div>
+      <StatusBar exportStatus={exportStatus} exportMessage={exportMessage} imageCount={images.length} />
+
+      {aiContextMenu && (
+        <AiContextMenu
+          position={aiContextMenu}
+          canGenerate={Boolean(editorAdapter)}
+          isRunning={aiGeneration.isRunning}
+          onClose={() => setAiContextMenu(null)}
+          onGenerateWork={() => runContextGeneration("full")}
+          onGenerateFragment={() => runContextGeneration("partial")}
+        />
       )}
 
       <ImageManager

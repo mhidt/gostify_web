@@ -241,4 +241,11 @@ body {
   color: var(--accent-foreground);
   font-weight: 600;
   padding: 0 0.2rem;
+  font-size: 0;
+  white-space: nowrap;
+}
+
+.img-placeholder::after {
+  content: attr(data-img-label);
+  font-size: 0.875rem;
 }

@@ -218,6 +218,7 @@ export const imagePlaceholderPlugin = $prose(() =>
     props: {
       decorations(state) {
         const decorations: Decoration[] = [];
+        let imageIndex = 0;
 
         state.doc.descendants((node, pos) => {
           if (!node.isText || !node.text) return;
@@ -226,7 +227,13 @@ export const imagePlaceholderPlugin = $prose(() =>
           for (const match of matches) {
             const index = match.index;
             if (index === undefined) continue;
-            decorations.push(Decoration.inline(pos + index, pos + index + 5, { class: "img-placeholder" }));
+            imageIndex += 1;
+            decorations.push(
+              Decoration.inline(pos + index, pos + index + 5, {
+                class: "img-placeholder",
+                "data-img-label": `(рис. ${imageIndex})`,
+              }),
+            );
           }
         });
 

@@ -23,6 +23,7 @@ interface MilkdownEditorProps {
   onUploadImage?: (file: File) => Promise<{ name: string; blobUrl: string }>;
   registerImageInserter?: (insertImage: ((name: string) => void) | null) => void;
   registerEditorAdapter?: (adapter: EditorAdapter | null) => void;
+  onAiContextMenu?: (position: { x: number; y: number }) => void;
 }
 
 function escapeRegExp(value: string) {
@@ -59,6 +60,7 @@ function MilkdownEditorInner({
   onUploadImage,
   registerImageInserter,
   registerEditorAdapter,
+  onAiContextMenu,
 }: MilkdownEditorProps) {
   const onChangeRef = useRef(onChange);
   const imageUrlsRef = useRef(imageUrls);
@@ -272,7 +274,14 @@ function MilkdownEditorInner({
   }, [registerEditorAdapter]);
 
   return (
-    <div className="milkdown-editor flex-1 overflow-auto">
+    <div
+      className="milkdown-editor flex-1 overflow-auto"
+      onContextMenu={(event) => {
+        if (!onAiContextMenu) return;
+        event.preventDefault();
+        onAiContextMenu({ x: event.clientX, y: event.clientY });
+      }}
+    >
       <Milkdown />
     </div>
   );
