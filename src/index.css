@@ -157,6 +157,8 @@ body {
 
     p {
       line-height: 1.6;
+      text-align: justify;
+      text-indent: var(--editor-first-line-indent, 1.25cm);
     }
 
     code {
@@ -256,7 +258,13 @@ body {
 }
 
 .image-caption {
+  text-indent: 0;
   text-align: center;
+}
+
+.milkdown-editor .ProseMirror p.image-caption {
+  text-align: center;
+  text-indent: 0;
 }
 
 .image-caption-prefix {
@@ -266,7 +274,14 @@ body {
 
 .image-paragraph {
   line-height: 0;
+  text-indent: 0;
   text-align: center;
+}
+
+.milkdown-editor .ProseMirror p.image-paragraph {
+  line-height: 0;
+  text-align: center;
+  text-indent: 0;
 }
 
 .resizable-image-node {

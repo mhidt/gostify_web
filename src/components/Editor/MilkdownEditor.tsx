@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { defaultValueCtx, Editor, editorViewCtx, parserCtx, rootCtx } from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
@@ -13,12 +13,14 @@ import { nord } from "@milkdown/theme-nord";
 import type { EditorAdapter } from "@/core/ai/generator";
 import { normalizeEditorMarkdown } from "@/core/editor/markdown";
 import { switchCase } from "@/core/editor/utils";
-import { editorEnhancementPlugins } from "@/lib/editorEnhancements";
+import type { DocxPluginSettings } from "@/core/settings";
+import { editorEnhancementPlugins, setEditorImageCaptionSettings } from "@/lib/editorEnhancements";
 import "@milkdown/theme-nord/style.css";
 
 interface MilkdownEditorProps {
   content: string;
   onChange: (value: string) => void;
+  settings: Pick<DocxPluginSettings, "firstLineIndent" | "imageShortCaption" | "imageCaptionSeparator">;
   imageUrls?: Map<string, string>;
   onUploadImage?: (file: File) => Promise<{ name: string; blobUrl: string }>;
   registerImageInserter?: (insertImage: ((name: string) => void) | null) => void;
@@ -56,6 +58,7 @@ function fromEditorMarkdown(markdown: string, imageUrls: Map<string, string>) {
 function MilkdownEditorInner({
   content,
   onChange,
+  settings,
   imageUrls = new Map(),
   onUploadImage,
   registerImageInserter,
@@ -68,6 +71,7 @@ function MilkdownEditorInner({
   onChangeRef.current = onChange;
   imageUrlsRef.current = imageUrls;
   onUploadImageRef.current = onUploadImage;
+  setEditorImageCaptionSettings(settings);
 
   const editorMarkdown = useMemo(() => toEditorMarkdown(content, imageUrls), []);
 
@@ -117,6 +121,14 @@ function MilkdownEditorInner({
 
   const getEditorRef = useRef(get);
   getEditorRef.current = get;
+
+  useEffect(() => {
+    setEditorImageCaptionSettings(settings);
+    getEditorRef.current()?.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      view.dispatch(view.state.tr.setMeta("editor-image-caption-settings", Date.now()));
+    });
+  }, [settings.imageShortCaption, settings.imageCaptionSeparator]);
 
   useEffect(() => {
     if (!registerImageInserter) return;
@@ -276,6 +288,7 @@ function MilkdownEditorInner({
   return (
     <div
       className="milkdown-editor flex-1 overflow-auto"
+      style={{ "--editor-first-line-indent": `${settings.firstLineIndent}cm` } as CSSProperties}
       onContextMenu={(event) => {
         if (!onAiContextMenu) return;
         event.preventDefault();

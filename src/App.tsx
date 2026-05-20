@@ -189,6 +189,7 @@ export default function App() {
             key={documentVersion}
             content={content}
             onChange={setContent}
+            settings={settings}
             imageUrls={imageUrls}
             onUploadImage={handleUploadImage}
             registerImageInserter={registerImageInserter}

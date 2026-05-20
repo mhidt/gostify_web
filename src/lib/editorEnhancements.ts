@@ -3,9 +3,30 @@ import { NodeSelection, Plugin, PluginKey, TextSelection, type Selection } from 
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@milkdown/kit/prose/view";
 import { $prose } from "@milkdown/kit/utils";
 import { switchCase } from "@/core/editor/utils";
+import { DEFAULT_SETTINGS, type DocxPluginSettings } from "@/core/settings";
 
 const OPEN_QUOTE = "«";
 const CLOSE_QUOTE = "»";
+type ImageCaptionDisplaySettings = Pick<DocxPluginSettings, "imageShortCaption" | "imageCaptionSeparator">;
+
+let imageCaptionDisplaySettings: ImageCaptionDisplaySettings = {
+  imageShortCaption: DEFAULT_SETTINGS.imageShortCaption,
+  imageCaptionSeparator: DEFAULT_SETTINGS.imageCaptionSeparator,
+};
+
+export function setEditorImageCaptionSettings(settings: ImageCaptionDisplaySettings): void {
+  imageCaptionDisplaySettings = settings;
+}
+
+function getInlineImageLabel(number: number): string {
+  return `(${imageCaptionDisplaySettings.imageShortCaption ? "рис." : "рисунок"} ${number})`;
+}
+
+function getCaptionPrefix(number: number): string {
+  const label = imageCaptionDisplaySettings.imageShortCaption ? "Рис." : "Рисунок";
+  const separator = imageCaptionDisplaySettings.imageCaptionSeparator === "dash" ? " \u2013" : ".";
+  return `${label} ${number}${separator} `;
+}
 
 function charAt(doc: ProseNode, pos: number) {
   if (pos < 0 || pos >= doc.content.size) return "";
@@ -434,7 +455,7 @@ export const imagePlaceholderPlugin = $prose(() =>
             decorations.push(
               Decoration.inline(from, to, {
                 class: "img-placeholder",
-                "data-img-label": `(рис. ${imageIndex})`,
+                "data-img-label": getInlineImageLabel(imageIndex),
                 "data-img-start": String(from),
               }),
             );
@@ -480,7 +501,7 @@ export const imageCaptionAlignmentPlugin = $prose(() =>
                   () => {
                     const span = document.createElement("span");
                     span.className = "image-caption-prefix";
-                    span.textContent = `Рисунок ${captionNumber}. `;
+                    span.textContent = getCaptionPrefix(captionNumber);
                     span.setAttribute("contenteditable", "false");
                     return span;
                   },
