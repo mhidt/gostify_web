@@ -146,13 +146,13 @@ body {
     }
 
     h1 {
-      font-size: 1.5em;
-      font-weight: 700;
+      font-size: var(--editor-chapter-font-size, 16pt);
+      font-weight: var(--editor-chapter-font-weight, 700);
     }
 
     h2 {
-      font-size: 1.25em;
-      font-weight: 700;
+      font-size: var(--editor-paragraph-font-size, 14pt);
+      font-weight: var(--editor-paragraph-font-weight, 700);
     }
 
     p {
@@ -235,6 +235,25 @@ body {
   margin-right: 0.25rem;
   pointer-events: none;
   user-select: none;
+}
+
+.heading-number-prefix {
+  user-select: none;
+}
+
+.milkdown-editor .ProseMirror h1.editor-chapter-heading {
+  font-size: var(--editor-chapter-font-size, 16pt);
+  font-weight: var(--editor-chapter-font-weight, 700);
+  text-align: var(--editor-chapter-align, center);
+  text-indent: var(--editor-chapter-indent, 0);
+  text-transform: var(--editor-chapter-text-transform, none);
+}
+
+.milkdown-editor .ProseMirror h2.editor-paragraph-heading {
+  font-size: var(--editor-paragraph-font-size, 14pt);
+  font-weight: var(--editor-paragraph-font-weight, 700);
+  text-align: var(--editor-paragraph-align, justify);
+  text-indent: var(--editor-paragraph-indent, 0);
 }
 
 .img-placeholder {

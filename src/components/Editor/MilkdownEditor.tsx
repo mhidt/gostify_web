@@ -14,13 +14,30 @@ import type { EditorAdapter } from "@/core/ai/generator";
 import { normalizeEditorMarkdown } from "@/core/editor/markdown";
 import { switchCase } from "@/core/editor/utils";
 import type { DocxPluginSettings } from "@/core/settings";
-import { editorEnhancementPlugins, setEditorImageCaptionSettings } from "@/lib/editorEnhancements";
+import { editorEnhancementPlugins, setEditorDisplaySettings } from "@/lib/editorEnhancements";
 import "@milkdown/theme-nord/style.css";
 
 interface MilkdownEditorProps {
   content: string;
   onChange: (value: string) => void;
-  settings: Pick<DocxPluginSettings, "firstLineIndent" | "imageShortCaption" | "imageCaptionSeparator">;
+  settings: Pick<
+    DocxPluginSettings,
+    | "chapterAlignment"
+    | "chapterAllCaps"
+    | "chapterBold"
+    | "chapterDot"
+    | "chapterFontSize"
+    | "chapterIndent"
+    | "chapterPrefix"
+    | "firstLineIndent"
+    | "imageCaptionSeparator"
+    | "imageShortCaption"
+    | "paragraphAlignment"
+    | "paragraphBold"
+    | "paragraphDot"
+    | "paragraphFontSize"
+    | "paragraphIndent"
+  >;
   imageUrls?: Map<string, string>;
   onUploadImage?: (file: File) => Promise<{ name: string; blobUrl: string }>;
   registerImageInserter?: (insertImage: ((name: string) => void) | null) => void;
@@ -55,6 +72,12 @@ function fromEditorMarkdown(markdown: string, imageUrls: Map<string, string>) {
   return nextMarkdown;
 }
 
+function toTextAlign(value: string): "center" | "justify" | "left" {
+  if (value === "center") return "center";
+  if (value === "justified") return "justify";
+  return "left";
+}
+
 function MilkdownEditorInner({
   content,
   onChange,
@@ -71,7 +94,7 @@ function MilkdownEditorInner({
   onChangeRef.current = onChange;
   imageUrlsRef.current = imageUrls;
   onUploadImageRef.current = onUploadImage;
-  setEditorImageCaptionSettings(settings);
+  setEditorDisplaySettings(settings);
 
   const editorMarkdown = useMemo(() => toEditorMarkdown(content, imageUrls), []);
 
@@ -123,12 +146,18 @@ function MilkdownEditorInner({
   getEditorRef.current = get;
 
   useEffect(() => {
-    setEditorImageCaptionSettings(settings);
+    setEditorDisplaySettings(settings);
     getEditorRef.current()?.action((ctx) => {
       const view = ctx.get(editorViewCtx);
-      view.dispatch(view.state.tr.setMeta("editor-image-caption-settings", Date.now()));
+      view.dispatch(view.state.tr.setMeta("editor-display-settings", Date.now()));
     });
-  }, [settings.imageShortCaption, settings.imageCaptionSeparator]);
+  }, [
+    settings.chapterDot,
+    settings.chapterPrefix,
+    settings.imageShortCaption,
+    settings.imageCaptionSeparator,
+    settings.paragraphDot,
+  ]);
 
   useEffect(() => {
     if (!registerImageInserter) return;
@@ -288,7 +317,20 @@ function MilkdownEditorInner({
   return (
     <div
       className="milkdown-editor flex-1 overflow-auto"
-      style={{ "--editor-first-line-indent": `${settings.firstLineIndent}cm` } as CSSProperties}
+      style={
+        {
+          "--editor-chapter-align": toTextAlign(settings.chapterAlignment),
+          "--editor-chapter-font-size": `${settings.chapterFontSize}pt`,
+          "--editor-chapter-font-weight": settings.chapterBold ? "700" : "400",
+          "--editor-chapter-indent": settings.chapterIndent ? `${settings.firstLineIndent}cm` : "0",
+          "--editor-chapter-text-transform": settings.chapterAllCaps ? "uppercase" : "none",
+          "--editor-first-line-indent": `${settings.firstLineIndent}cm`,
+          "--editor-paragraph-align": toTextAlign(settings.paragraphAlignment),
+          "--editor-paragraph-font-size": `${settings.paragraphFontSize}pt`,
+          "--editor-paragraph-font-weight": settings.paragraphBold ? "700" : "400",
+          "--editor-paragraph-indent": settings.paragraphIndent ? `${settings.firstLineIndent}cm` : "0",
+        } as CSSProperties
+      }
       onContextMenu={(event) => {
         if (!onAiContextMenu) return;
         event.preventDefault();

@@ -7,25 +7,60 @@ import { DEFAULT_SETTINGS, type DocxPluginSettings } from "@/core/settings";
 
 const OPEN_QUOTE = "«";
 const CLOSE_QUOTE = "»";
-type ImageCaptionDisplaySettings = Pick<DocxPluginSettings, "imageShortCaption" | "imageCaptionSeparator">;
+const HEADING_EXCLUSIONS = [
+  "введение",
+  "заключение",
+  "список использованных источников",
+  "содержание",
+];
+type EditorDisplaySettings = Pick<
+  DocxPluginSettings,
+  "chapterDot" | "chapterPrefix" | "imageCaptionSeparator" | "imageShortCaption" | "paragraphDot"
+>;
 
-let imageCaptionDisplaySettings: ImageCaptionDisplaySettings = {
+let editorDisplaySettings: EditorDisplaySettings = {
+  chapterDot: DEFAULT_SETTINGS.chapterDot,
+  chapterPrefix: DEFAULT_SETTINGS.chapterPrefix,
   imageShortCaption: DEFAULT_SETTINGS.imageShortCaption,
   imageCaptionSeparator: DEFAULT_SETTINGS.imageCaptionSeparator,
+  paragraphDot: DEFAULT_SETTINGS.paragraphDot,
 };
 
-export function setEditorImageCaptionSettings(settings: ImageCaptionDisplaySettings): void {
-  imageCaptionDisplaySettings = settings;
+export function setEditorDisplaySettings(settings: EditorDisplaySettings): void {
+  editorDisplaySettings = settings;
 }
 
 function getInlineImageLabel(number: number): string {
-  return `(${imageCaptionDisplaySettings.imageShortCaption ? "рис." : "рисунок"} ${number})`;
+  return `(${editorDisplaySettings.imageShortCaption ? "рис." : "рисунок"} ${number})`;
 }
 
 function getCaptionPrefix(number: number): string {
-  const label = imageCaptionDisplaySettings.imageShortCaption ? "Рис." : "Рисунок";
-  const separator = imageCaptionDisplaySettings.imageCaptionSeparator === "dash" ? " \u2013" : ".";
+  const label = editorDisplaySettings.imageShortCaption ? "Рис." : "Рисунок";
+  const separator = editorDisplaySettings.imageCaptionSeparator === "dash" ? " \u2013" : ".";
   return `${label} ${number}${separator} `;
+}
+
+function getPlainHeadingText(node: ProseNode): string {
+  return node.textContent.trim().replace(/^\d+(\.\d+)*\.?\s+/, "");
+}
+
+function isExcludedHeading(node: ProseNode): boolean {
+  return HEADING_EXCLUSIONS.includes(getPlainHeadingText(node).toLowerCase());
+}
+
+function hasHeadingNumberPrefix(node: ProseNode): boolean {
+  return /^\d+(\.\d+)*\.?\s+/.test(node.textContent.trim());
+}
+
+function getChapterPrefix(number: number): string {
+  const word = editorDisplaySettings.chapterPrefix ? "Глава " : "";
+  const separator = editorDisplaySettings.chapterDot ? ". " : " ";
+  return `${word}${number}${separator}`;
+}
+
+function getParagraphPrefix(number: string): string {
+  const separator = editorDisplaySettings.paragraphDot ? ". " : " ";
+  return `${number}${separator}`;
 }
 
 function charAt(doc: ProseNode, pos: number) {
@@ -353,6 +388,64 @@ export const headingMarkerPlugin = $prose(() =>
   }),
 );
 
+export const headingFormattingPlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("heading-formatting"),
+    props: {
+      decorations(state) {
+        const decorations: Decoration[] = [];
+        let chapterNumber = 0;
+        let paragraphNumber = 0;
+
+        state.doc.descendants((node, pos) => {
+          if (node.type.name !== "heading") return;
+
+          const level = Number(node.attrs.level) || 1;
+          if (level !== 1 && level !== 2) return;
+
+          const isChapter = level === 1;
+          const className = isChapter ? "editor-chapter-heading" : "editor-paragraph-heading";
+          decorations.push(
+            Decoration.node(pos, pos + node.nodeSize, {
+              class: className,
+            }),
+          );
+
+          if (isExcludedHeading(node)) return;
+
+          let prefix = "";
+          if (isChapter) {
+            chapterNumber += 1;
+            paragraphNumber = 0;
+            prefix = getChapterPrefix(chapterNumber);
+          } else {
+            paragraphNumber += 1;
+            prefix = getParagraphPrefix(chapterNumber === 0 ? `${paragraphNumber}` : `${chapterNumber}.${paragraphNumber}`);
+          }
+
+          if (hasHeadingNumberPrefix(node)) return;
+
+          decorations.push(
+            Decoration.widget(
+              pos + 1,
+              () => {
+                const span = document.createElement("span");
+                span.className = "heading-number-prefix";
+                span.textContent = prefix;
+                span.setAttribute("contenteditable", "false");
+                return span;
+              },
+              { side: -1 },
+            ),
+          );
+        });
+
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  }),
+);
+
 export const pageBreakPlugin = $prose(() =>
   new Plugin({
     key: new PluginKey("page-break-shortcut"),
@@ -556,6 +649,7 @@ export const editorEnhancementPlugins = [
   trimDoubleClickSelectionPlugin,
   smartQuotesPlugin,
   headingMarkerPlugin,
+  headingFormattingPlugin,
   pageBreakPlugin,
   saveShortcutPlugin,
   changeCasePlugin,
