@@ -30,7 +30,6 @@ export function Header({
     <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-bold text-gray-900">Gostify</h1>
-        <span className="text-xs text-gray-400">веб-версия</span>
         <span className="text-xs text-gray-400">{saveLabels[saveState]}</span>
       </div>
 

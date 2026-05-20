@@ -200,7 +200,7 @@ export default function App() {
         )}
       </main>
 
-      <StatusBar exportStatus={exportStatus} exportMessage={exportMessage} imageCount={images.length} />
+      <StatusBar exportStatus={exportStatus} exportMessage={exportMessage} imageCount={images.length} content={content} />
 
       {aiContextMenu && (
         <AiContextMenu

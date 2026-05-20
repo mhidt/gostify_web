@@ -21,8 +21,7 @@ export function EditorToolbar({
 }: EditorToolbarProps) {
   return (
     <div className="flex items-center gap-2 overflow-x-auto border-b border-gray-200 bg-white px-4 py-2">
-      <span className="mr-2 shrink-0 text-sm font-semibold text-gray-500">Gostify</span>
-      <div className="h-5 w-px bg-gray-300" />
+
       <button
         onClick={onImagesClick}
         className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"

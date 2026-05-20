@@ -1,6 +1,6 @@
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
-import { Plugin, PluginKey, TextSelection, type Selection } from "@milkdown/kit/prose/state";
-import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
+import { NodeSelection, Plugin, PluginKey, TextSelection, type Selection } from "@milkdown/kit/prose/state";
+import { Decoration, DecorationSet, type EditorView, type NodeView } from "@milkdown/kit/prose/view";
 import { $prose } from "@milkdown/kit/utils";
 import { switchCase } from "@/core/editor/utils";
 
@@ -25,6 +25,169 @@ function hasUnclosedQuote(doc: ProseNode, pos: number) {
     if (char === CLOSE_QUOTE) depth -= 1;
   }
   return depth > 0;
+}
+
+function containsImageNode(node: ProseNode) {
+  if (node.type.name === "image") return true;
+
+  let found = false;
+  node.descendants((child) => {
+    if (child.type.name === "image") {
+      found = true;
+      return false;
+    }
+
+    return !found;
+  });
+
+  return found;
+}
+
+function isEmptyParagraph(node: ProseNode) {
+  return node.type.name === "paragraph" && node.textContent.trim().length === 0;
+}
+
+function isStandaloneImageParagraph(node: ProseNode) {
+  return node.type.name === "paragraph" && node.childCount === 1 && node.child(0).type.name === "image";
+}
+
+function parseImageAlt(alt: unknown): { baseAlt: string; requestedWidth?: number } {
+  const text = typeof alt === "string" ? alt : "";
+  const pipeIndex = text.lastIndexOf("|");
+  if (pipeIndex === -1) return { baseAlt: text };
+
+  const baseAlt = text.slice(0, pipeIndex).trim();
+  const requestedWidth = parseInt(text.slice(pipeIndex + 1), 10);
+  return {
+    baseAlt: baseAlt || text,
+    requestedWidth: Number.isFinite(requestedWidth) ? requestedWidth : undefined,
+  };
+}
+
+function clampImageWidth(width: number, maxWidth: number): number {
+  return Math.round(Math.max(80, Math.min(width, maxWidth)));
+}
+
+class ResizableImageView implements NodeView {
+  dom: HTMLElement;
+  private image: HTMLImageElement;
+  private node: ProseNode;
+  private view: EditorView;
+  private getPos: () => number | undefined;
+
+  constructor(node: ProseNode, view: EditorView, getPos: (() => number | undefined) | boolean) {
+    this.node = node;
+    this.view = view;
+    this.getPos = typeof getPos === "function" ? getPos : () => undefined;
+
+    this.dom = document.createElement("span");
+    this.dom.className = "resizable-image-node";
+    this.dom.setAttribute("contenteditable", "false");
+
+    this.image = document.createElement("img");
+    this.image.draggable = false;
+    this.dom.appendChild(this.image);
+
+    this.dom.appendChild(this.createHandle("top-left", "left"));
+    this.dom.appendChild(this.createHandle("top-right", "right"));
+    this.dom.appendChild(this.createHandle("bottom-left", "left"));
+    this.dom.appendChild(this.createHandle("bottom-right", "right"));
+    this.dom.addEventListener("mousedown", this.selectImage);
+    this.render();
+  }
+
+  update(node: ProseNode): boolean {
+    if (node.type !== this.node.type) return false;
+
+    this.node = node;
+    this.render();
+    return true;
+  }
+
+  selectNode(): void {
+    this.dom.classList.add("is-selected");
+  }
+
+  deselectNode(): void {
+    this.dom.classList.remove("is-selected");
+  }
+
+  stopEvent(event: Event): boolean {
+    return this.dom.contains(event.target as HTMLElement);
+  }
+
+  ignoreMutation(): boolean {
+    return true;
+  }
+
+  destroy(): void {
+    this.dom.removeEventListener("mousedown", this.selectImage);
+  }
+
+  private render(): void {
+    const { src, title } = this.node.attrs;
+    const { baseAlt, requestedWidth } = parseImageAlt(this.node.attrs.alt);
+
+    this.image.src = typeof src === "string" ? src : "";
+    this.image.alt = baseAlt;
+    this.image.title = typeof title === "string" ? title : "";
+    this.image.style.width = requestedWidth ? `${requestedWidth}px` : "";
+  }
+
+  private createHandle(corner: "top-left" | "top-right" | "bottom-left" | "bottom-right", side: "left" | "right"): HTMLElement {
+    const handle = document.createElement("span");
+    handle.className = `resizable-image-handle resizable-image-handle-${corner}`;
+    handle.addEventListener("mousedown", (event) => this.startResize(event, side));
+    return handle;
+  }
+
+  private selectImage = (event: MouseEvent): void => {
+    event.preventDefault();
+    const pos = this.getPos();
+    if (typeof pos !== "number") return;
+
+    this.view.dispatch(this.view.state.tr.setSelection(NodeSelection.create(this.view.state.doc, pos)));
+    this.view.focus();
+  };
+
+  private startResize(event: MouseEvent, side: "left" | "right"): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.selectImage(event);
+
+    const startX = event.clientX;
+    const startWidth = this.image.getBoundingClientRect().width;
+    const maxWidth = Math.max(80, this.dom.parentElement?.clientWidth ?? startWidth);
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const nextWidth = side === "right" ? startWidth + delta : startWidth - delta;
+      this.image.style.width = `${clampImageWidth(nextWidth, maxWidth)}px`;
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      this.commitWidth(this.image.getBoundingClientRect().width);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  private commitWidth(width: number): void {
+    const pos = this.getPos();
+    if (typeof pos !== "number") return;
+
+    const { baseAlt } = parseImageAlt(this.node.attrs.alt);
+    const nextAlt = `${baseAlt}|${clampImageWidth(width, this.dom.parentElement?.clientWidth ?? width)}`;
+    const tr = this.view.state.tr.setNodeMarkup(pos, undefined, {
+      ...this.node.attrs,
+      alt: nextAlt,
+    });
+
+    this.view.dispatch(tr.setSelection(NodeSelection.create(tr.doc, pos)));
+  }
 }
 
 export const smartQuotesPlugin = $prose(() =>
@@ -144,12 +307,18 @@ export const headingMarkerPlugin = $prose(() =>
           if (!cursorInside) return;
 
           decorations.push(
-            Decoration.widget(start, () => {
-              const span = document.createElement("span");
-              span.className = "heading-marker";
-              span.textContent = `${"#".repeat(Number(node.attrs.level) || 1)} `;
-              return span;
-            }),
+            Decoration.widget(
+              start,
+              () => {
+                const span = document.createElement("span");
+                span.className = "heading-marker";
+                span.textContent = `${"#".repeat(Number(node.attrs.level) || 1)} `;
+                span.setAttribute("aria-hidden", "true");
+                span.setAttribute("contenteditable", "false");
+                return span;
+              },
+              { side: -1 },
+            ),
           );
         });
 
@@ -216,9 +385,27 @@ export const imagePlaceholderPlugin = $prose(() =>
   new Plugin({
     key: new PluginKey("image-placeholder"),
     props: {
+      handleDOMEvents: {
+        mousedown(view, event) {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return false;
+
+          const placeholder = target.closest<HTMLElement>(".img-placeholder");
+          if (!placeholder) return false;
+
+          const start = Number(placeholder.dataset.imgStart);
+          if (!Number.isFinite(start)) return false;
+
+          event.preventDefault();
+          view.focus();
+          view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, start + 1)));
+          return true;
+        },
+      },
       decorations(state) {
         const decorations: Decoration[] = [];
         let imageIndex = 0;
+        const { from: selectionFrom, to: selectionTo } = state.selection;
 
         state.doc.descendants((node, pos) => {
           if (!node.isText || !node.text) return;
@@ -228,16 +415,94 @@ export const imagePlaceholderPlugin = $prose(() =>
             const index = match.index;
             if (index === undefined) continue;
             imageIndex += 1;
+            const from = pos + index;
+            const to = from + 5;
+            const selectionTouchesPlaceholder = selectionFrom <= to && selectionTo >= from;
+            if (selectionTouchesPlaceholder) {
+              decorations.push(
+                Decoration.inline(from, to, {
+                  class: "img-placeholder-editing",
+                }),
+              );
+              continue;
+            }
+
             decorations.push(
-              Decoration.inline(pos + index, pos + index + 5, {
+              Decoration.inline(from, to, {
                 class: "img-placeholder",
                 "data-img-label": `(рис. ${imageIndex})`,
+                "data-img-start": String(from),
               }),
             );
           }
         });
 
         return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  }),
+);
+
+export const imageCaptionAlignmentPlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("image-caption-alignment"),
+    props: {
+      decorations(state) {
+        const decorations: Decoration[] = [];
+        let captionPending = false;
+
+        state.doc.forEach((node, offset) => {
+          const hasImage = containsImageNode(node);
+          const standaloneImage = isStandaloneImageParagraph(node);
+          const isCaption =
+            captionPending &&
+            !hasImage &&
+            node.type.name === "paragraph" &&
+            node.textContent.trim().length > 0;
+
+          if (isCaption) {
+            decorations.push(
+              Decoration.node(offset, offset + node.nodeSize, {
+                class: "image-caption",
+              }),
+            );
+          }
+
+          if (standaloneImage) {
+            decorations.push(
+              Decoration.node(offset, offset + node.nodeSize, {
+                class: "image-paragraph",
+              }),
+            );
+          }
+
+          if (hasImage) {
+            captionPending = true;
+            return;
+          }
+
+          if (isCaption) {
+            captionPending = false;
+            return;
+          }
+
+          if (!isEmptyParagraph(node)) {
+            captionPending = false;
+          }
+        });
+
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  }),
+);
+
+export const resizableImagePlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("resizable-images"),
+    props: {
+      nodeViews: {
+        image: (node, view, getPos) => new ResizableImageView(node, view, getPos),
       },
     },
   }),
@@ -250,5 +515,7 @@ export const editorEnhancementPlugins = [
   pageBreakPlugin,
   saveShortcutPlugin,
   changeCasePlugin,
+  resizableImagePlugin,
   imagePlaceholderPlugin,
+  imageCaptionAlignmentPlugin,
 ];
