@@ -107,6 +107,10 @@ function isStandaloneImageParagraph(node: ProseNode) {
   return node.type.name === "paragraph" && node.childCount === 1 && node.child(0).type.name === "image";
 }
 
+function isPageBreakParagraph(node: ProseNode) {
+  return node.type.name === "paragraph" && node.textContent.trim() === "---";
+}
+
 function hasCaptionPrefix(text: string) {
   return /^Рис(?:унок|\.)\s+\d+(?:\.\d+)?(?:\.|\s+\u2013|-)\s+/u.test(text.trim());
 }
@@ -464,6 +468,29 @@ export const headingFormattingPlugin = $prose(() =>
   }),
 );
 
+export const pageBreakDisplayPlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("page-break-display"),
+    props: {
+      decorations(state) {
+        const decorations: Decoration[] = [];
+
+        state.doc.forEach((node, offset) => {
+          if (!isPageBreakParagraph(node)) return;
+
+          decorations.push(
+            Decoration.node(offset, offset + node.nodeSize, {
+              class: "editor-page-break",
+            }),
+          );
+        });
+
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  }),
+);
+
 export const pageBreakPlugin = $prose(() =>
   new Plugin({
     key: new PluginKey("page-break-shortcut"),
@@ -668,6 +695,7 @@ export const editorEnhancementPlugins = [
   smartQuotesPlugin,
   headingMarkerPlugin,
   headingFormattingPlugin,
+  pageBreakDisplayPlugin,
   pageBreakPlugin,
   saveShortcutPlugin,
   changeCasePlugin,

@@ -208,22 +208,33 @@ body {
     }
 
     hr {
+      box-sizing: border-box;
+      height: 42px;
+      width: calc(100% + (var(--editor-page-padding-x, 1.5rem) * 2) + 2px);
+      margin: 3.5rem 0 2.5rem;
+      margin-left: calc((var(--editor-page-padding-x, 1.5rem) * -1) - 1px);
       border: none;
-      border-top: 2px dashed var(--border);
-      margin: 1.5em 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
       position: relative;
+    }
 
-      &::after {
-        content: "Разрыв страницы";
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        background: var(--bg-secondary);
-        color: #9ca3af;
-        font-size: 0.75rem;
-        padding: 0 0.5rem;
-      }
+    p.editor-page-break {
+      box-sizing: border-box;
+      height: 42px;
+      width: calc(100% + (var(--editor-page-padding-x, 1.5rem) * 2) + 2px);
+      margin: 3.5rem 0 2.5rem;
+      margin-left: calc((var(--editor-page-padding-x, 1.5rem) * -1) - 1px);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: transparent;
+      font-size: 0;
+      line-height: 0;
+      text-align: left;
+      text-indent: 0;
+      user-select: none;
     }
 
     ul, ol {
