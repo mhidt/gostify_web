@@ -51,6 +51,10 @@ function isStandaloneImageParagraph(node: ProseNode) {
   return node.type.name === "paragraph" && node.childCount === 1 && node.child(0).type.name === "image";
 }
 
+function hasCaptionPrefix(text: string) {
+  return /^Рис(?:унок|\.)\s+\d+(?:\.\d+)?(?:\.|\s+\u2013|-)\s+/u.test(text.trim());
+}
+
 function parseImageAlt(alt: unknown): { baseAlt: string; requestedWidth?: number } {
   const text = typeof alt === "string" ? alt : "";
   const pipeIndex = text.lastIndexOf("|");
@@ -449,23 +453,41 @@ export const imageCaptionAlignmentPlugin = $prose(() =>
     props: {
       decorations(state) {
         const decorations: Decoration[] = [];
-        let captionPending = false;
+        let imageNumber = 0;
+        let pendingCaptionNumber: number | null = null;
 
         state.doc.forEach((node, offset) => {
           const hasImage = containsImageNode(node);
           const standaloneImage = isStandaloneImageParagraph(node);
           const isCaption =
-            captionPending &&
+            pendingCaptionNumber !== null &&
             !hasImage &&
             node.type.name === "paragraph" &&
             node.textContent.trim().length > 0;
 
           if (isCaption) {
+            const captionNumber = pendingCaptionNumber;
             decorations.push(
               Decoration.node(offset, offset + node.nodeSize, {
                 class: "image-caption",
               }),
             );
+
+            if (!hasCaptionPrefix(node.textContent)) {
+              decorations.push(
+                Decoration.widget(
+                  offset + 1,
+                  () => {
+                    const span = document.createElement("span");
+                    span.className = "image-caption-prefix";
+                    span.textContent = `Рисунок ${captionNumber}. `;
+                    span.setAttribute("contenteditable", "false");
+                    return span;
+                  },
+                  { side: -1 },
+                ),
+              );
+            }
           }
 
           if (standaloneImage) {
@@ -477,17 +499,18 @@ export const imageCaptionAlignmentPlugin = $prose(() =>
           }
 
           if (hasImage) {
-            captionPending = true;
+            imageNumber += 1;
+            pendingCaptionNumber = imageNumber;
             return;
           }
 
           if (isCaption) {
-            captionPending = false;
+            pendingCaptionNumber = null;
             return;
           }
 
           if (!isEmptyParagraph(node)) {
-            captionPending = false;
+            pendingCaptionNumber = null;
           }
         });
 

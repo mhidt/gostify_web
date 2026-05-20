@@ -259,6 +259,11 @@ body {
   text-align: center;
 }
 
+.image-caption-prefix {
+  font-weight: 600;
+  user-select: none;
+}
+
 .image-paragraph {
   line-height: 0;
   text-align: center;
