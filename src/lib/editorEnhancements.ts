@@ -396,6 +396,7 @@ export const headingFormattingPlugin = $prose(() =>
         const decorations: Decoration[] = [];
         let chapterNumber = 0;
         let paragraphNumber = 0;
+        let hasChapter = false;
 
         state.doc.descendants((node, pos) => {
           if (node.type.name !== "heading") return;
@@ -405,6 +406,23 @@ export const headingFormattingPlugin = $prose(() =>
 
           const isChapter = level === 1;
           const className = isChapter ? "editor-chapter-heading" : "editor-paragraph-heading";
+          if (isChapter && hasChapter) {
+            decorations.push(
+              Decoration.widget(
+                pos,
+                () => {
+                  const div = document.createElement("div");
+                  div.className = "chapter-page-break";
+                  div.setAttribute("contenteditable", "false");
+                  div.setAttribute("aria-label", "Разрыв страницы");
+                  return div;
+                },
+                { side: -1 },
+              ),
+            );
+          }
+          if (isChapter) hasChapter = true;
+
           decorations.push(
             Decoration.node(pos, pos + node.nodeSize, {
               class: className,
