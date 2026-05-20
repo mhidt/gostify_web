@@ -39,6 +39,7 @@ export function SettingsPanel({ settings, setSettings, resetSettings, open, onCl
             <ToggleField label="Слово «глава» перед номером" value={settings.chapterPrefix} onChange={(v) => set("chapterPrefix", v)} />
             <ToggleField label="Заглавные буквы" value={settings.chapterAllCaps} onChange={(v) => set("chapterAllCaps", v)} />
             <ToggleField label="Точка после номера" value={settings.chapterDot} onChange={(v) => set("chapterDot", v)} />
+            <ToggleField label="Абзацный отступ" value={settings.chapterIndent} onChange={(v) => set("chapterIndent", v)} />
           </Section>
 
           <Section title="Заголовки параграфов (##)">
@@ -46,6 +47,7 @@ export function SettingsPanel({ settings, setSettings, resetSettings, open, onCl
             <ToggleField label="Жирное начертание" value={settings.paragraphBold} onChange={(v) => set("paragraphBold", v)} />
             <SelectField label="Выравнивание" value={settings.paragraphAlignment} options={{ center: "По центру", left: "По левому краю", justified: "По ширине" }} onChange={(v) => set("paragraphAlignment", v)} />
             <ToggleField label="Точка после номера" value={settings.paragraphDot} onChange={(v) => set("paragraphDot", v)} />
+            <ToggleField label="Абзацный отступ" value={settings.paragraphIndent} onChange={(v) => set("paragraphIndent", v)} />
           </Section>
 
           <Section title="Изображения">
