@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { FileText, WandSparkles } from 'lucide-react'
 
 export interface ContextMenuState {
   x: number
@@ -47,7 +48,7 @@ export default function EditorContextMenu({ menu, onClose, onGenerate }: EditorC
             onClose()
           }}
         >
-          <span className="text-base leading-none">□</span>
+          <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
           Сгенерировать работу
         </button>
       ) : (
@@ -58,7 +59,7 @@ export default function EditorContextMenu({ menu, onClose, onGenerate }: EditorC
             onClose()
           }}
         >
-          <span className="text-base leading-none">✎</span>
+          <WandSparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
           Сгенерировать фрагмент
         </button>
       )}

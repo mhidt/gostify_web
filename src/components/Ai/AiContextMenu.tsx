@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { FileText, WandSparkles } from "lucide-react";
 
 interface Position {
   x: number;
@@ -69,7 +70,7 @@ export default function AiContextMenu({
         }}
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-transparent"
       >
-        <span className="text-base leading-none">□</span>
+        <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
         Сгенерировать работу
       </button>
       <button
@@ -80,7 +81,7 @@ export default function AiContextMenu({
         }}
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-transparent"
       >
-        <span className="text-base leading-none">✎</span>
+        <WandSparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
         Сгенерировать фрагмент
       </button>
     </div>
