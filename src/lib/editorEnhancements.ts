@@ -624,7 +624,7 @@ export const imageCaptionAlignmentPlugin = $prose(() =>
             node.type.name === "paragraph" &&
             node.textContent.trim().length > 0;
 
-          if (isCaption) {
+          if (isCaption && pendingCaptionNumber !== null) {
             const captionNumber = pendingCaptionNumber;
             decorations.push(
               Decoration.node(offset, offset + node.nodeSize, {
