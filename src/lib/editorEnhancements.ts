@@ -1,7 +1,7 @@
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { NodeSelection, Plugin, PluginKey, TextSelection, type Selection } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@milkdown/kit/prose/view";
-import { $prose } from "@milkdown/kit/utils";
+import { $prose, $remark } from "@milkdown/kit/utils";
 import { switchCase } from "@/core/editor/utils";
 import { DEFAULT_SETTINGS, type DocxPluginSettings } from "@/core/settings";
 
@@ -15,14 +15,14 @@ const HEADING_EXCLUSIONS = [
 ];
 type EditorDisplaySettings = Pick<
   DocxPluginSettings,
-  "chapterDot" | "chapterPrefix" | "imageCaptionSeparator" | "imageShortCaption" | "paragraphDot"
+  "captionSeparator" | "chapterDot" | "chapterPrefix" | "imageShortCaption" | "paragraphDot"
 >;
 
 let editorDisplaySettings: EditorDisplaySettings = {
   chapterDot: DEFAULT_SETTINGS.chapterDot,
   chapterPrefix: DEFAULT_SETTINGS.chapterPrefix,
+  captionSeparator: DEFAULT_SETTINGS.captionSeparator,
   imageShortCaption: DEFAULT_SETTINGS.imageShortCaption,
-  imageCaptionSeparator: DEFAULT_SETTINGS.imageCaptionSeparator,
   paragraphDot: DEFAULT_SETTINGS.paragraphDot,
 };
 
@@ -30,13 +30,14 @@ export function setEditorDisplaySettings(settings: EditorDisplaySettings): void 
   editorDisplaySettings = settings;
 }
 
-function getInlineImageLabel(number: number): string {
-  return `(${editorDisplaySettings.imageShortCaption ? "рис." : "рисунок"} ${number})`;
-}
-
 function getCaptionPrefix(number: number): string {
   const label = editorDisplaySettings.imageShortCaption ? "Рис." : "Рисунок";
-  const separator = editorDisplaySettings.imageCaptionSeparator === "dash" ? " \u2013" : ".";
+  const separator = editorDisplaySettings.captionSeparator === "dash" ? " \u2013" : ".";
+  return `${label} ${number}${separator} `;
+}
+
+function getElementCaptionPrefix(label: "Листинг" | "Таблица", number: number): string {
+  const separator = editorDisplaySettings.captionSeparator === "dash" ? " \u2013" : ".";
   return `${label} ${number}${separator} `;
 }
 
@@ -114,6 +115,31 @@ function isPageBreakParagraph(node: ProseNode) {
 function hasCaptionPrefix(text: string) {
   return /^Рис(?:унок|\.)\s+\d+(?:\.\d+)?(?:\.|\s+\u2013|-)\s+/u.test(text.trim());
 }
+
+function hasTableCaptionPrefix(text: string) {
+  return /^Таблица\s+\d+(?:\.|\s+\u2013|-)\s+/u.test(text.trim());
+}
+
+function getListingCaptionFromLanguage(language: unknown): string {
+  if (typeof language !== "string") return "";
+  return language.trim().replace(/^\S+\s*/, "").trim();
+}
+
+export const codeBlockMetaPlugin = $remark("code-block-meta", () => () => (tree) => {
+  const visit = (node: unknown): void => {
+    if (!node || typeof node !== "object") return;
+
+    const current = node as { type?: string; lang?: unknown; meta?: unknown; children?: unknown[] };
+    if (current.type === "code" && typeof current.meta === "string" && current.meta.trim()) {
+      current.lang = `${typeof current.lang === "string" ? current.lang : ""} ${current.meta.trim()}`.trim();
+      current.meta = undefined;
+    }
+
+    current.children?.forEach(visit);
+  };
+
+  visit(tree);
+});
 
 function parseImageAlt(alt: unknown): { baseAlt: string; requestedWidth?: number } {
   const text = typeof alt === "string" ? alt : "";
@@ -544,19 +570,41 @@ export const changeCasePlugin = $prose(() =>
   }),
 );
 
-export const imagePlaceholderPlugin = $prose(() =>
+type PlaceholderType = "img" | "listing" | "table";
+
+function getPlaceholderLabel(type: PlaceholderType, number: number | null): string {
+  const value = number ?? "?";
+  if (type === "img") return `(${editorDisplaySettings.imageShortCaption ? "рис." : "рисунок"} ${value})`;
+  if (type === "listing") return `(листинг ${value})`;
+  return `(таблица ${value})`;
+}
+
+function findPreviousElementNumber(elements: Array<{ pos: number; number: number }>, pos: number): number | null {
+  let found: number | null = null;
+  for (const element of elements) {
+    if (element.pos >= pos) break;
+    found = element.number;
+  }
+  return found;
+}
+
+function findReferencedElementNumber(elements: Array<{ pos: number; number: number }>, pos: number): number | null {
+  return findPreviousElementNumber(elements, pos) ?? elements.find((element) => element.pos > pos)?.number ?? null;
+}
+
+export const elementPlaceholderPlugin = $prose(() =>
   new Plugin({
-    key: new PluginKey("image-placeholder"),
+    key: new PluginKey("element-placeholder"),
     props: {
       handleDOMEvents: {
         mousedown(view, event) {
           const target = event.target;
           if (!(target instanceof HTMLElement)) return false;
 
-          const placeholder = target.closest<HTMLElement>(".img-placeholder");
+          const placeholder = target.closest<HTMLElement>(".element-placeholder");
           if (!placeholder) return false;
 
-          const start = Number(placeholder.dataset.imgStart);
+          const start = Number(placeholder.dataset.elementStart);
           if (!Number.isFinite(start)) return false;
 
           event.preventDefault();
@@ -567,38 +615,216 @@ export const imagePlaceholderPlugin = $prose(() =>
       },
       decorations(state) {
         const decorations: Decoration[] = [];
-        let imageIndex = 0;
+        const elements: Record<PlaceholderType, Array<{ pos: number; number: number }>> = {
+          img: [],
+          listing: [],
+          table: [],
+        };
         const { from: selectionFrom, to: selectionTo } = state.selection;
+
+        state.doc.forEach((node, offset) => {
+          if (containsImageNode(node)) {
+            elements.img.push({ pos: offset, number: elements.img.length + 1 });
+          }
+          if (node.type.name === "code_block") {
+            elements.listing.push({ pos: offset, number: elements.listing.length + 1 });
+          }
+          if (node.type.name === "table") {
+            elements.table.push({ pos: offset, number: elements.table.length + 1 });
+          }
+        });
 
         state.doc.descendants((node, pos) => {
           if (!node.isText || !node.text) return;
 
-          const matches = node.text.matchAll(/\{img}/g);
+          const matches = node.text.matchAll(/\{(img|table|listing)}/g);
           for (const match of matches) {
             const index = match.index;
             if (index === undefined) continue;
-            imageIndex += 1;
+            const type = match[1] as PlaceholderType;
             const from = pos + index;
-            const to = from + 5;
+            const to = from + match[0].length;
             const selectionTouchesPlaceholder = selectionFrom <= to && selectionTo >= from;
             if (selectionTouchesPlaceholder) {
               decorations.push(
                 Decoration.inline(from, to, {
-                  class: "img-placeholder-editing",
+                  class: "element-placeholder-editing",
                 }),
               );
               continue;
             }
 
+            const elementNumber = findReferencedElementNumber(elements[type], from);
             decorations.push(
               Decoration.inline(from, to, {
-                class: "img-placeholder",
-                "data-img-label": getInlineImageLabel(imageIndex),
-                "data-img-start": String(from),
+                class: "element-placeholder",
+                "data-element-label": getPlaceholderLabel(type, elementNumber),
+                "data-element-start": String(from),
               }),
             );
           }
         });
+
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  }),
+);
+
+export const imagePlaceholderPlugin = elementPlaceholderPlugin;
+
+export const listingCaptionPlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("listing-caption"),
+    props: {
+      decorations(state) {
+        const decorations: Decoration[] = [];
+        let listingNumber = 0;
+
+        state.doc.forEach((node, offset) => {
+          if (node.type.name === "code_block") {
+            listingNumber += 1;
+            const caption = getListingCaptionFromLanguage(node.attrs.language);
+            decorations.push(
+              Decoration.node(offset, offset + node.nodeSize, {
+                class: "listing-code-block",
+              }),
+            );
+
+            if (!caption) return;
+
+            decorations.push(
+              Decoration.widget(
+                offset,
+                () => {
+                  const div = document.createElement("div");
+                  div.className = "listing-caption";
+                  div.setAttribute("contenteditable", "false");
+
+                  const prefix = document.createElement("span");
+                  prefix.className = "listing-caption-prefix";
+                  prefix.textContent = getElementCaptionPrefix("Листинг", listingNumber);
+                  div.append(prefix, caption);
+                  return div;
+                },
+                { side: -1 },
+              ),
+            );
+          }
+        });
+
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  }),
+);
+
+export const tableCaptionPlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("table-caption"),
+    props: {
+      decorations(state) {
+        const decorations: Decoration[] = [];
+        let tableNumber = 0;
+        let previousNode: ProseNode | null = null;
+        let previousOffset = 0;
+
+        state.doc.forEach((node, offset) => {
+          if (node.type.name === "table") {
+            tableNumber += 1;
+            decorations.push(
+              Decoration.node(offset, offset + node.nodeSize, {
+                class: "gost-table",
+              }),
+            );
+
+            if (previousNode?.type.name === "paragraph" && previousNode.textContent.trim().length > 0) {
+              decorations.push(
+                Decoration.node(previousOffset, previousOffset + previousNode.nodeSize, {
+                  class: "gost-table-caption",
+                }),
+              );
+
+              if (!hasTableCaptionPrefix(previousNode.textContent)) {
+                decorations.push(
+                  Decoration.widget(
+                    previousOffset + 1,
+                    () => {
+                      const span = document.createElement("span");
+                      span.className = "gost-table-caption-prefix";
+                      span.textContent = getElementCaptionPrefix("Таблица", tableNumber);
+                      span.setAttribute("contenteditable", "false");
+                      return span;
+                    },
+                    { side: -1 },
+                  ),
+                );
+              }
+            }
+          }
+
+          previousNode = node;
+          previousOffset = offset;
+        });
+
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  }),
+);
+
+export const bibliographyPlugin = $prose(() =>
+  new Plugin({
+    key: new PluginKey("bibliography"),
+    props: {
+      decorations(state) {
+        const decorations: Decoration[] = [];
+        const linkRanges: Array<{ from: number; to: number; href: string }> = [];
+
+        state.doc.descendants((node, pos) => {
+          if (!node.isText) return;
+          const linkMark = node.marks.find((mark) => mark.type.name === "link");
+          const href = linkMark?.attrs.href;
+          if (typeof href !== "string" || href.length === 0) return;
+
+          const from = pos;
+          const to = pos + node.nodeSize;
+          const previous = linkRanges[linkRanges.length - 1];
+          if (previous && previous.href === href && previous.to === from) {
+            previous.to = to;
+            return;
+          }
+
+          linkRanges.push({ from, to, href });
+        });
+
+        const urlNumbers = new Map<string, number>();
+        for (const range of linkRanges) {
+          let number = urlNumbers.get(range.href);
+          if (number === undefined) {
+            number = urlNumbers.size + 1;
+            urlNumbers.set(range.href, number);
+          }
+
+          decorations.push(
+            Decoration.inline(range.from, range.to, {
+              class: "bib-link",
+            }),
+          );
+          decorations.push(
+            Decoration.widget(
+              range.to,
+              () => {
+                const span = document.createElement("span");
+                span.className = "bib-ref";
+                span.textContent = ` [${number}]`;
+                span.setAttribute("contenteditable", "false");
+                return span;
+              },
+              { side: 1 },
+            ),
+          );
+        }
 
         return DecorationSet.create(state.doc, decorations);
       },
@@ -691,6 +917,7 @@ export const resizableImagePlugin = $prose(() =>
 );
 
 export const editorEnhancementPlugins = [
+  ...codeBlockMetaPlugin,
   trimDoubleClickSelectionPlugin,
   smartQuotesPlugin,
   headingMarkerPlugin,
@@ -700,6 +927,9 @@ export const editorEnhancementPlugins = [
   saveShortcutPlugin,
   changeCasePlugin,
   resizableImagePlugin,
-  imagePlaceholderPlugin,
+  elementPlaceholderPlugin,
   imageCaptionAlignmentPlugin,
+  listingCaptionPlugin,
+  tableCaptionPlugin,
+  bibliographyPlugin,
 ];

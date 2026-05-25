@@ -157,7 +157,7 @@ export async function buildDocument(
       pictureNumber++;
       chapterPictureNumber++;
       const prefix = settings.imageShortCaption ? 'Рис.' : 'Рисунок';
-      const sep = settings.imageCaptionSeparator === 'dash' ? ' \u2013' : '.';
+      const sep = settings.captionSeparator === 'dash' ? ' \u2013' : '.';
       const num = settings.imageNumbering === 'byChapter'
         ? `${chapterNumber}.${chapterPictureNumber}`
         : `${pictureNumber}`;

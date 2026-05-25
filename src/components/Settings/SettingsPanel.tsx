@@ -53,7 +53,7 @@ export function SettingsPanel({ settings, setSettings, resetSettings, open, onCl
           <Section title="Изображения">
             <TextField label="Размер по умолчанию" value={settings.defaultImageSize} onChange={(v) => set("defaultImageSize", v)} hint="Число (px) или процент (80%)" />
             <ToggleField label="Сокращать «Рисунок»" value={settings.imageShortCaption} onChange={(v) => set("imageShortCaption", v)} />
-            <SelectField label="Разделитель после номера" value={settings.imageCaptionSeparator} options={{ dot: ". (точка)", dash: "– (тире)" }} onChange={(v) => set("imageCaptionSeparator", v)} />
+            <SelectField label="Разделитель подписей" value={settings.captionSeparator} options={{ dot: ". (точка)", dash: "– (тире)" }} onChange={(v) => set("captionSeparator", v)} />
             <SelectField label="Нумерация рисунков" value={settings.imageNumbering} options={{ sequential: "Сквозная (1, 2, 3...)", byChapter: "По разделам (1.1, 1.2...)" }} onChange={(v) => set("imageNumbering", v)} />
           </Section>
 

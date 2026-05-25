@@ -6,7 +6,10 @@ export function loadSettings(): DocxPluginSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const stored = JSON.parse(raw) as Partial<DocxPluginSettings> & { imageCaptionSeparator?: string };
+    const { imageCaptionSeparator, ...currentSettings } = stored;
+    const captionSeparator = currentSettings.captionSeparator ?? imageCaptionSeparator;
+    return { ...DEFAULT_SETTINGS, ...currentSettings, ...(captionSeparator ? { captionSeparator } : {}) };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

@@ -29,9 +29,10 @@ interface MilkdownEditorProps {
     | "chapterFontSize"
     | "chapterIndent"
     | "chapterPrefix"
+    | "captionSeparator"
     | "firstLineIndent"
-    | "imageCaptionSeparator"
     | "imageShortCaption"
+    | "lineSpacing"
     | "paragraphAlignment"
     | "paragraphBold"
     | "paragraphDot"
@@ -155,7 +156,7 @@ function MilkdownEditorInner({
     settings.chapterDot,
     settings.chapterPrefix,
     settings.imageShortCaption,
-    settings.imageCaptionSeparator,
+    settings.captionSeparator,
     settings.paragraphDot,
   ]);
 
@@ -325,6 +326,7 @@ function MilkdownEditorInner({
           "--editor-chapter-indent": settings.chapterIndent ? `${settings.firstLineIndent}cm` : "0",
           "--editor-chapter-text-transform": settings.chapterAllCaps ? "uppercase" : "none",
           "--editor-first-line-indent": `${settings.firstLineIndent}cm`,
+          "--editor-line-spacing": settings.lineSpacing,
           "--editor-paragraph-align": toTextAlign(settings.paragraphAlignment),
           "--editor-paragraph-font-size": `${settings.paragraphFontSize}pt`,
           "--editor-paragraph-font-weight": settings.paragraphBold ? "700" : "400",

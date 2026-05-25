@@ -28,7 +28,7 @@ export interface DocxPluginSettings {
   saveFormat: string;
   defaultImageSize: string;
   imageShortCaption: boolean;
-  imageCaptionSeparator: string;
+  captionSeparator: string;
   imageNumbering: string;
   linksAtEndOfSentence: boolean;
   skipBibliography: boolean;
@@ -61,7 +61,7 @@ export const DEFAULT_SETTINGS: DocxPluginSettings = {
   saveFormat: "doc",
   defaultImageSize: "80%",
   imageShortCaption: false,
-  imageCaptionSeparator: "dot",
+  captionSeparator: "dot",
   imageNumbering: "sequential",
   linksAtEndOfSentence: false,
   skipBibliography: false,

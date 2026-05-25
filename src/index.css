@@ -159,7 +159,7 @@ body {
     }
 
     p {
-      line-height: 1.6;
+      line-height: var(--editor-line-spacing, 1.5);
       text-align: justify;
       text-indent: var(--editor-first-line-indent, 1.25cm);
     }
@@ -204,6 +204,42 @@ body {
       th {
         font-weight: 600;
         background: var(--bg-secondary);
+      }
+    }
+
+    pre.listing-code-block {
+      background: var(--editor-code-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 0;
+      font-family: "Courier New", monospace;
+      font-size: 12pt;
+      padding: 0.8em 1em;
+
+      code {
+        background: none;
+        color: inherit;
+        padding: 0;
+      }
+    }
+
+    table.gost-table {
+      border-collapse: collapse;
+      width: 100%;
+      border-color: var(--border);
+
+      th {
+        font-weight: 700;
+        background: var(--bg-secondary);
+      }
+
+      td, th {
+        border: 1px solid var(--border);
+        padding: 4px 8px;
+      }
+
+      td {
+        background: transparent;
       }
     }
 
@@ -308,6 +344,7 @@ body {
   text-indent: var(--editor-paragraph-indent, 0);
 }
 
+.element-placeholder,
 .img-placeholder {
   border-radius: 4px;
   background: var(--accent);
@@ -318,11 +355,17 @@ body {
   white-space: nowrap;
 }
 
+.element-placeholder::after {
+  content: attr(data-element-label);
+  font-size: 0.875rem;
+}
+
 .img-placeholder::after {
   content: attr(data-img-label);
   font-size: 0.875rem;
 }
 
+.element-placeholder-editing,
 .img-placeholder-editing {
   color: #9ca3af;
   font-weight: 400;
@@ -341,6 +384,48 @@ body {
 .image-caption-prefix {
   font-weight: 600;
   user-select: none;
+}
+
+.listing-caption {
+  text-indent: 0;
+  text-align: left;
+}
+
+.milkdown-editor .ProseMirror p.listing-caption {
+  text-align: left;
+  text-indent: 0;
+}
+
+.listing-caption-prefix {
+  user-select: none;
+}
+
+.gost-table-caption {
+  display: block;
+  text-indent: 0;
+  text-align: left;
+}
+
+.milkdown-editor .ProseMirror p.gost-table-caption {
+  display: block;
+  text-align: left;
+  text-indent: 0;
+  white-space: normal;
+}
+
+.gost-table-caption-prefix {
+  user-select: none;
+}
+
+.bib-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.bib-ref {
+  user-select: none;
+  font-size: 0.85em;
+  vertical-align: super;
 }
 
 .image-paragraph {
