@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { Moon, Settings, Sun } from "lucide-react";
 
 interface HeaderProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -59,15 +60,19 @@ export function Header({
         </button>
         <button
           onClick={onToggleTheme}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100"
+          title={theme === "dark" ? "Светлая тема" : "Темная тема"}
+          aria-label={theme === "dark" ? "Включить светлую тему" : "Включить темную тему"}
         >
-          {theme === "dark" ? "Светлая" : "Темная"}
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
         <button
           onClick={onOpenSettings}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100"
+          title="Настройки"
+          aria-label="Открыть настройки"
         >
-          Настройки
+          <Settings className="h-4 w-4" />
         </button>
       </div>
     </header>

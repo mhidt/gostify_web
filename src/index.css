@@ -274,7 +274,27 @@ body {
     }
 
     ul, ol {
-      padding-left: 1.5em;
+      margin: 0;
+      margin-left: var(--editor-first-line-indent, 1.25cm);
+      padding-left: 1.35em;
+    }
+
+    li {
+      padding-left: 0.25em;
+    }
+
+    li + li {
+      margin-top: 0.35em;
+    }
+
+    li > p {
+      margin: 0;
+      text-indent: 0;
+    }
+
+    li p.editor-page-break {
+      width: auto;
+      margin-left: 0;
     }
   }
 }

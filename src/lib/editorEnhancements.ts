@@ -1,4 +1,4 @@
-import type { Node as ProseNode } from "@milkdown/kit/prose/model";
+import { Fragment, type Node as ProseNode } from "@milkdown/kit/prose/model";
 import { NodeSelection, Plugin, PluginKey, TextSelection, type Selection } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@milkdown/kit/prose/view";
 import { $prose, $remark } from "@milkdown/kit/utils";
@@ -525,7 +525,26 @@ export const pageBreakPlugin = $prose(() =>
         if (event.key !== "Enter" || !event.ctrlKey || !event.shiftKey) return false;
 
         event.preventDefault();
-        const { from, to } = view.state.selection;
+        const { schema, selection } = view.state;
+        const { from, to, empty, $from } = selection;
+
+        if (empty) {
+          for (let depth = $from.depth; depth > 0; depth -= 1) {
+            const node = $from.node(depth);
+            if (node.type.name !== "bullet_list" && node.type.name !== "ordered_list") continue;
+
+            const paragraph = schema.nodes.paragraph;
+            if (!paragraph) break;
+
+            const breakParagraph = paragraph.create(null, schema.text("---"));
+            const nextParagraph = paragraph.create();
+            const insertPos = $from.after(depth);
+            const tr = view.state.tr.insert(insertPos, Fragment.fromArray([breakParagraph, nextParagraph]));
+            view.dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + breakParagraph.nodeSize + 1)).scrollIntoView());
+            return true;
+          }
+        }
+
         view.dispatch(view.state.tr.insertText("\n---\n", from, to).scrollIntoView());
         return true;
       },
