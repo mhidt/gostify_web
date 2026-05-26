@@ -232,6 +232,7 @@ export default function App() {
         onClose={() => setAiOpen(false)}
         onGenerate={aiGeneration.generate}
         onStop={aiGeneration.stop}
+        onSetActiveProvider={(index) => setSettings({ aiActiveProvider: index })}
       />
 
       <SettingsPanel

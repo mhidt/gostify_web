@@ -57,21 +57,6 @@ export function AiSettings({ settings, setSettings }: AiSettingsProps) {
           />
         </label>
 
-        <label className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Активный провайдер</span>
-          <select
-            value={String(settings.aiActiveProvider)}
-            onChange={(event) => setSettings({ aiActiveProvider: Number(event.target.value) })}
-            className="max-w-44 rounded border border-gray-300 px-2 py-1 text-sm"
-          >
-            {settings.aiProviders.map((provider, index) => (
-              <option key={`${provider.name}-${index}`} value={index}>
-                {provider.name || `Провайдер ${index + 1}`}
-              </option>
-            ))}
-          </select>
-        </label>
-
         {settings.aiProviders.map((provider, index) => (
           <div key={index} className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3">
             <p className="text-sm font-semibold text-gray-700">{provider.name || `Провайдер ${index + 1}`}</p>

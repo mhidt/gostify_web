@@ -57,8 +57,60 @@ function aiStreamProxy() {
   }
 }
 
+function imageProxy() {
+  return {
+    name: 'gostify-image-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/image-proxy', (req, res) => {
+        const requestUrl = new URL(req.url || '', 'http://localhost')
+        const target = requestUrl.searchParams.get('url')
+
+        if (!target) {
+          res.statusCode = 400
+          res.end('Missing url param')
+          return
+        }
+
+        const parsedTarget = new URL(target)
+        const client = parsedTarget.protocol === 'https:' ? https : http
+
+        const proxyReq = client.request(
+          {
+            protocol: parsedTarget.protocol,
+            hostname: parsedTarget.hostname,
+            port: parsedTarget.port || (parsedTarget.protocol === 'https:' ? 443 : 80),
+            path: parsedTarget.pathname + parsedTarget.search,
+            method: 'GET',
+            headers: {
+              'Accept': 'image/*,*/*',
+              'User-Agent': 'Mozilla/5.0',
+            },
+          },
+          (proxyRes) => {
+            res.statusCode = proxyRes.statusCode || 500
+            const contentType = proxyRes.headers['content-type']
+            if (contentType) res.setHeader('Content-Type', contentType)
+            const contentLength = proxyRes.headers['content-length']
+            if (contentLength) res.setHeader('Content-Length', contentLength)
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.setHeader('Cache-Control', 'public, max-age=86400')
+            proxyRes.pipe(res)
+          },
+        )
+
+        proxyReq.on('error', (error) => {
+          if (!res.headersSent) res.statusCode = 502
+          res.end(error.message)
+        })
+
+        proxyReq.end()
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), aiStreamProxy()],
+  plugins: [react(), tailwindcss(), aiStreamProxy(), imageProxy()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

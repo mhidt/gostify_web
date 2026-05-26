@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { AiGenerationState, useAiGeneration } from "@/hooks/useAiGeneration";
 import type { DocxPluginSettings } from "@/core/settings";
 import type { EditorAdapter, GenerateMode } from "@/core/ai/generator";
@@ -11,6 +12,7 @@ interface AiPanelProps {
   onClose: () => void;
   onGenerate: ReturnType<typeof useAiGeneration>["generate"];
   onStop: () => void;
+  onSetActiveProvider: (index: number) => void;
 }
 
 const phaseLabels: Record<AiGenerationState["phase"], string> = {
@@ -29,7 +31,22 @@ export function AiPanel({
   onClose,
   onGenerate,
   onStop,
+  onSetActiveProvider,
 }: AiPanelProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownOpen]);
+
   if (!open) return null;
 
   const provider = settings.aiProviders[settings.aiActiveProvider];
@@ -53,10 +70,65 @@ export function AiPanel({
       </div>
 
       <div className="space-y-4 overflow-y-auto p-4">
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
-          <p className="text-xs font-semibold text-gray-500">Провайдер</p>
-          <p className="mt-1 truncate text-sm font-medium text-gray-900">{provider?.name || "Не выбран"}</p>
-          <p className="mt-1 truncate text-xs text-gray-500">{provider?.model || "Модель не задана"}</p>
+        <div ref={dropdownRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setDropdownOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-3 text-left transition-colors hover:border-gray-300 hover:bg-gray-100"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-500">Провайдер</p>
+              <p className="mt-1 truncate text-sm font-medium text-gray-900">{provider?.name || "Не выбран"}</p>
+              <p className="mt-0.5 truncate text-xs text-gray-500">{provider?.model || "Модель не задана"}</p>
+            </div>
+            <svg
+              className={`ml-2 h-4 w-4 flex-shrink-0 text-gray-400 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {dropdownOpen && settings.aiProviders.length > 0 && (
+            <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+              {settings.aiProviders.map((p, index) => {
+                const isActive = index === settings.aiActiveProvider;
+                return (
+                  <button
+                    key={`${p.name}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      onSetActiveProvider(index);
+                      setDropdownOpen(false);
+                    }}
+                    className={`ai-provider-option flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors ${
+                      isActive
+                        ? "ai-provider-active bg-blue-600/10 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-2 w-2 flex-shrink-0 rounded-full ${
+                        isActive ? "bg-blue-600" : "bg-transparent"
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{p.name || `Провайдер ${index + 1}`}</p>
+                      <p className="truncate text-xs text-gray-500">{p.model || "Модель не задана"}</p>
+                    </div>
+                    {!p.apiKey && (
+                      <span className="flex-shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                        нет ключа
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -72,7 +144,7 @@ export function AiPanel({
             type="button"
             disabled={!canGenerate}
             onClick={() => run("partial")}
-            className="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="btn-fragment rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             Фрагмент
           </button>
