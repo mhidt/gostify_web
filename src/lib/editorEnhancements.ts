@@ -801,7 +801,7 @@ export const bibliographyPlugin = $prose(() =>
           const target = event.target;
           if (!(target instanceof HTMLElement)) return false;
 
-          if (target instanceof HTMLInputElement && target.classList.contains("bib-source-url-input")) {
+          if (target instanceof HTMLInputElement && target.classList.contains("bib-url-input")) {
             event.stopPropagation();
             return false;
           }
@@ -817,7 +817,7 @@ export const bibliographyPlugin = $prose(() =>
         },
         keydown(view, event) {
           const target = event.target;
-          if (!(target instanceof HTMLInputElement) || !target.classList.contains("bib-source-url-input")) return false;
+          if (!(target instanceof HTMLInputElement) || !target.classList.contains("bib-url-input")) return false;
 
           if ((event as KeyboardEvent).key === "Escape") {
             event.preventDefault();
@@ -832,7 +832,7 @@ export const bibliographyPlugin = $prose(() =>
         },
         focusout(view, event) {
           const target = event.target;
-          if (!(target instanceof HTMLInputElement) || !target.classList.contains("bib-source-url-input")) return false;
+          if (!(target instanceof HTMLInputElement) || !target.classList.contains("bib-url-input")) return false;
 
           commitLinkHref(view, target);
           return false;
@@ -928,14 +928,12 @@ export const bibliographyDecorationPlugin = $prose(() =>
                   span.append("](");
 
                   const input = document.createElement("input");
-                  input.className = "bib-source-url-input";
+                  input.className = "bib-url-input";
                   input.value = range.href;
                   input.dataset.bibFrom = String(range.from);
                   input.dataset.bibTo = String(range.to);
                   input.dataset.bibHref = range.href;
-                  input.title = "URL ссылки";
                   input.setAttribute("aria-label", "URL ссылки");
-                  input.size = Math.max(12, Math.min(range.href.length + 1, 60));
                   span.append(input, ")");
                   span.setAttribute("contenteditable", "false");
                   return span;

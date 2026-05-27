@@ -509,25 +509,32 @@ body {
 }
 
 .bib-source-url {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0;
+  display: inline;
 }
 
-.bib-source-url-input {
+.bib-url-input {
+  display: inline;
   width: auto;
   min-width: 12ch;
   max-width: min(60ch, 70vw);
   border: 0;
   border-bottom: 1px solid var(--border);
+  border-radius: 0;
   background: transparent;
   color: #9ca3af;
   font: inherit;
+  font-size: 0.9em;
   outline: none;
   padding: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: baseline;
+  line-height: normal;
 }
 
-.bib-source-url-input:focus {
+.bib-url-input:focus {
   color: var(--text-primary);
   border-bottom-color: var(--text-primary);
 }
