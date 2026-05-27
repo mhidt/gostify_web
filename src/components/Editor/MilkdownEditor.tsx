@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { defaultValueCtx, Editor, editorViewCtx, parserCtx, rootCtx } from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
@@ -8,13 +8,16 @@ import { clipboard } from "@milkdown/kit/plugin/clipboard";
 import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
 import { upload, uploadConfig } from "@milkdown/kit/plugin/upload";
 import { TextSelection } from "@milkdown/kit/prose/state";
+import type { EditorView } from "@milkdown/kit/prose/view";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { nord } from "@milkdown/theme-nord";
 import type { EditorAdapter } from "@/core/ai/generator";
 import { normalizeEditorMarkdown } from "@/core/editor/markdown";
 import { switchCase } from "@/core/editor/utils";
 import type { DocxPluginSettings } from "@/core/settings";
+import { SearchPanel, type SearchPanelMode } from "@/components/Editor/SearchPanel";
 import { editorEnhancementPlugins, setEditorDisplaySettings } from "@/lib/editorEnhancements";
+import { clearSearch, searchPlugin, setSearchQuery } from "@/lib/plugins/searchPlugin";
 import "@milkdown/theme-nord/style.css";
 
 interface MilkdownEditorProps {
@@ -44,6 +47,7 @@ interface MilkdownEditorProps {
   registerImageInserter?: (insertImage: ((name: string) => void) | null) => void;
   registerEditorAdapter?: (adapter: EditorAdapter | null) => void;
   onAiContextMenu?: (position: { x: number; y: number }) => void;
+  registerSearchOpener?: (opener: ((mode: SearchPanelMode) => void) | null) => void;
 }
 
 function escapeRegExp(value: string) {
@@ -79,6 +83,13 @@ function toTextAlign(value: string): "center" | "justify" | "left" {
   return "left";
 }
 
+function getSelectedPlainText(view: EditorView) {
+  const { from, to, empty } = view.state.selection;
+  if (empty) return "";
+
+  return view.state.doc.textBetween(from, to, "\n", "\n");
+}
+
 function MilkdownEditorInner({
   content,
   onChange,
@@ -88,10 +99,16 @@ function MilkdownEditorInner({
   registerImageInserter,
   registerEditorAdapter,
   onAiContextMenu,
+  registerSearchOpener,
 }: MilkdownEditorProps) {
   const onChangeRef = useRef(onChange);
   const imageUrlsRef = useRef(imageUrls);
   const onUploadImageRef = useRef(onUploadImage);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const [editorView, setEditorView] = useState<EditorView | null>(null);
+  const [searchPanelMode, setSearchPanelMode] = useState<SearchPanelMode | null>(null);
+  const [searchPanelTop, setSearchPanelTop] = useState(8);
+  const [searchPanelKey, setSearchPanelKey] = useState(0);
   onChangeRef.current = onChange;
   imageUrlsRef.current = imageUrls;
   onUploadImageRef.current = onUploadImage;
@@ -138,6 +155,7 @@ function MilkdownEditorInner({
       .use(clipboard)
       .use(upload)
       .use(editorEnhancementPlugins)
+      .use(searchPlugin)
       .use(listener)
     ,
     [],
@@ -145,6 +163,99 @@ function MilkdownEditorInner({
 
   const getEditorRef = useRef(get);
   getEditorRef.current = get;
+
+  useEffect(() => {
+    let disposed = false;
+    let interval: number | undefined;
+
+    const syncEditorView = () => {
+      let foundView = false;
+      getEditorRef.current()?.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        foundView = true;
+        if (!disposed) {
+          setEditorView((previous) => (previous === view ? previous : view));
+          if (interval) {
+            window.clearInterval(interval);
+          }
+        }
+      });
+
+      return foundView;
+    };
+
+    if (!syncEditorView()) {
+      interval = window.setInterval(syncEditorView, 100);
+    }
+
+    return () => {
+      disposed = true;
+      if (interval) {
+        window.clearInterval(interval);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!searchPanelMode) return;
+
+    const updatePanelTop = () => {
+      const top = editorContainerRef.current?.getBoundingClientRect().top ?? 0;
+      setSearchPanelTop(Math.max(8, top + 8));
+    };
+
+    updatePanelTop();
+    window.addEventListener("resize", updatePanelTop);
+
+    return () => {
+      window.removeEventListener("resize", updatePanelTop);
+    };
+  }, [searchPanelMode]);
+
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if (!editorView) return;
+
+      // Use event.code instead of event.key to work with any keyboard layout.
+      // event.key returns layout-specific characters (e.g. "а" on Russian layout
+      // for the physical F key), while event.code returns the physical key ("KeyF").
+      const isFind = (event.ctrlKey || event.metaKey) && event.code === "KeyF";
+      const isReplace = (event.ctrlKey || event.metaKey) && (event.code === "KeyR" || event.code === "KeyH");
+
+      if (isFind || isReplace) {
+        // Allow Ctrl+F/H when focus is inside the editor area, or when the
+        // search panel is already open. In other contexts (e.g. a text input
+        // elsewhere in the UI) we let the event propagate so the browser or
+        // that component can handle it.
+        const activeElement = document.activeElement;
+        const isEditorActive = activeElement ? editorContainerRef.current?.contains(activeElement) : false;
+        if (!isEditorActive && !searchPanelMode) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const selectedText = getSelectedPlainText(editorView);
+        if (selectedText) {
+          setSearchQuery(editorView, selectedText);
+        }
+        setSearchPanelMode(isReplace ? "replace" : "search");
+        setSearchPanelKey((k) => k + 1);
+        return;
+      }
+
+      if (event.key === "Escape" && searchPanelMode) {
+        event.preventDefault();
+        clearSearch(editorView);
+        setSearchPanelMode(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleSearchShortcut, { capture: true });
+
+    return () => {
+      document.removeEventListener("keydown", handleSearchShortcut, { capture: true });
+    };
+  }, [editorView, searchPanelMode]);
 
   useEffect(() => {
     setEditorDisplaySettings(settings);
@@ -185,6 +296,25 @@ function MilkdownEditorInner({
       registerImageInserter(null);
     };
   }, [registerImageInserter]);
+
+  useEffect(() => {
+    if (!registerSearchOpener) return;
+
+    registerSearchOpener((mode) => {
+      if (editorView) {
+        const selectedText = getSelectedPlainText(editorView);
+        if (selectedText) {
+          setSearchQuery(editorView, selectedText);
+        }
+      }
+      setSearchPanelMode(mode);
+      setSearchPanelKey((k) => k + 1);
+    });
+
+    return () => {
+      registerSearchOpener(null);
+    };
+  }, [registerSearchOpener, editorView]);
 
   useEffect(() => {
     if (!registerEditorAdapter) return;
@@ -317,7 +447,8 @@ function MilkdownEditorInner({
 
   return (
     <div
-      className="milkdown-editor flex-1 overflow-auto"
+      ref={editorContainerRef}
+      className="milkdown-editor relative flex-1 overflow-auto"
       style={
         {
           "--editor-chapter-align": toTextAlign(settings.chapterAlignment),
@@ -339,6 +470,16 @@ function MilkdownEditorInner({
         onAiContextMenu({ x: event.clientX, y: event.clientY });
       }}
     >
+      {searchPanelMode && editorView ? (
+        <SearchPanel
+          mode={searchPanelMode}
+          view={editorView}
+          top={searchPanelTop}
+          activationKey={searchPanelKey}
+          onModeChange={setSearchPanelMode}
+          onClose={() => setSearchPanelMode(null)}
+        />
+      ) : null}
       <Milkdown />
     </div>
   );

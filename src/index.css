@@ -396,6 +396,16 @@ body {
   text-indent: var(--editor-paragraph-indent, 0);
 }
 
+.search-match {
+  border-radius: 2px;
+  background: rgb(250 204 21 / 45%);
+}
+
+.search-match-current {
+  background: rgb(249 115 22 / 55%);
+  box-shadow: 0 0 0 1px rgb(249 115 22 / 65%);
+}
+
 .element-placeholder,
 .img-placeholder {
   border-radius: 4px;

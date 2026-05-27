@@ -32,6 +32,7 @@ export default function App() {
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [documentVersion, setDocumentVersion] = useState(0);
   const [aiContextMenu, setAiContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [searchOpener, setSearchOpener] = useState<((mode: "search" | "replace") => void) | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("gostify-theme");
     if (saved === "light" || saved === "dark") return saved;
@@ -86,6 +87,10 @@ export default function App() {
 
   const registerEditorAdapter = useCallback((adapter: EditorAdapter | null) => {
     setEditorAdapter(adapter);
+  }, []);
+
+  const registerSearchOpener = useCallback((opener: ((mode: "search" | "replace") => void) | null) => {
+    setSearchOpener(() => opener);
   }, []);
 
   const handleInsertImage = useCallback(
@@ -179,6 +184,7 @@ export default function App() {
         onAiClick={() => setAiOpen((open) => !open)}
         onChangeCase={() => editorAdapter?.changeSelectionCase()}
         onCollectImages={() => editorAdapter?.insertImageDescriptions()}
+        onSearchClick={() => searchOpener?.("search")}
         imageCount={images.length}
         exportStatus={exportStatus}
       />
@@ -195,6 +201,7 @@ export default function App() {
             registerImageInserter={registerImageInserter}
             registerEditorAdapter={registerEditorAdapter}
             onAiContextMenu={handleAiContextMenu}
+            registerSearchOpener={registerSearchOpener}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-gray-500">Загрузка редактора...</div>
