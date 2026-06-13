@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+}
+
 @import "@milkdown/theme-nord/style.css";
 
 :root {
@@ -32,23 +45,23 @@
 }
 
 .dark {
-  --background: #252523;
+  --background: #1e1e1c;
   --foreground: oklch(0.985 0 0);
-  --card: #2c2c2a;
+  --card: #282826;
   --card-foreground: oklch(0.985 0 0);
-  --popover: #2c2c2a;
+  --popover: #282826;
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: #2f2f2d;
+  --muted: #333330;
   --muted-foreground: oklch(0.708 0 0);
-  --accent: #2f2f2d;
+  --accent: #3a3a36;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border-token: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border-token: oklch(1 0 0 / 18%);
+  --input: oklch(1 0 0 / 22%);
   --ring: oklch(0.556 0 0);
 
   --bg-primary: var(--card);
@@ -113,7 +126,7 @@ body {
   color: var(--text-primary);
 }
 
-.dark button:hover {
+.dark button:not([class*="bg-brand"]):not([class*="bg-blue"]):not([class*="bg-emerald"]):not([class*="bg-red"]):hover {
   background-color: var(--accent);
 }
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MilkdownEditor } from "@/components/Editor/MilkdownEditor";
-import { EditorToolbar } from "@/components/Editor/EditorToolbar";
 import { ImageManager } from "@/components/Editor/ImageManager";
 import { AiPanel } from "@/components/Ai/AiPanel";
 import AiContextMenu from "@/components/Ai/AiContextMenu";
@@ -176,9 +175,6 @@ export default function App() {
         onSaveMarkdown={handleSaveMarkdown}
         onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
         onOpenSettings={() => setSettingsOpen(true)}
-      />
-
-      <EditorToolbar
         onExportDocx={handleExport}
         onImagesClick={() => setImagesOpen((open) => !open)}
         onAiClick={() => setAiOpen((open) => !open)}
