@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { FileText, WandSparkles } from "lucide-react";
+import { useEditorAdapter } from "@/contexts/EditorContext";
 
 interface Position {
   x: number;
@@ -8,7 +9,6 @@ interface Position {
 
 interface Props {
   position: Position;
-  canGenerate: boolean;
   isRunning: boolean;
   onClose: () => void;
   onGenerateWork: () => void;
@@ -21,12 +21,13 @@ const MARGIN = 8;
 
 export default function AiContextMenu({
   position,
-  canGenerate,
   isRunning,
   onClose,
   onGenerateWork,
   onGenerateFragment,
 }: Props) {
+  const { editorAdapter } = useEditorAdapter();
+  const canGenerate = Boolean(editorAdapter);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

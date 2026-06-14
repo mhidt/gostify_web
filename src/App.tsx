@@ -1,73 +1,36 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MilkdownEditor } from "@/components/Editor/MilkdownEditor";
-import { ImageManager } from "@/components/Editor/ImageManager";
 import { AiPanel } from "@/components/Ai/AiPanel";
 import AiContextMenu from "@/components/Ai/AiContextMenu";
-import type { ExportStatus } from "@/components/Editor/ExportButton";
 import { Header } from "@/components/Layout/Header";
 import { StatusBar } from "@/components/Layout/StatusBar";
 import { SettingsPanel } from "@/components/Settings/SettingsPanel";
+import { ImageManager } from "@/components/Editor/ImageManager";
+import { EditorProvider, useEditorAdapter } from "@/contexts/EditorContext";
 import { useSettings } from "@/hooks/useSettings";
 import { useDocument } from "@/hooks/useDocument";
 import { useImages } from "@/hooks/useImages";
 import { useAiGeneration } from "@/hooks/useAiGeneration";
-import { exportDocx } from "@/core/docx/export";
-import type { EditorAdapter } from "@/core/ai/generator";
+import { useTheme } from "@/hooks/useTheme";
+import { useExport } from "@/hooks/useExport";
 import { normalizeEditorMarkdown } from "@/core/editor/markdown";
-import { browserImageProvider } from "@/lib/browserImageProvider";
 import { downloadBlob } from "@/lib/downloadBlob";
 
-export default function App() {
+function AppContent() {
   const { settings, setSettings, resetSettings } = useSettings();
   const { content, setContent, replaceContent, flushSave, saveState } = useDocument();
   const { images, imageUrls, ready, addImage, removeImage, getImageBlobUrl } = useImages();
   const aiGeneration = useAiGeneration(settings);
+  const { theme, toggleTheme } = useTheme();
+  const { exportStatus, exportMessage, handleExport } = useExport(content, settings, flushSave);
+  const { editorAdapter } = useEditorAdapter();
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [imagesOpen, setImagesOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  const [insertImage, setInsertImage] = useState<((name: string) => void) | null>(null);
-  const [editorAdapter, setEditorAdapter] = useState<EditorAdapter | null>(null);
-  const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
-  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [documentVersion, setDocumentVersion] = useState(0);
   const [aiContextMenu, setAiContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const [searchOpener, setSearchOpener] = useState<((mode: "search" | "replace") => void) | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    const saved = localStorage.getItem("gostify-theme");
-    if (saved === "light" || saved === "dark") return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("gostify-theme", theme);
-  }, [theme]);
-
-  const handleExport = async () => {
-    if (exportStatus === "exporting") return;
-
-    setExportStatus("exporting");
-    setExportMessage(null);
-
-    try {
-      flushSave(normalizeEditorMarkdown(content));
-      await exportDocx(normalizeEditorMarkdown(content), settings, browserImageProvider);
-      setExportStatus("success");
-      setExportMessage("Документ скачан.");
-      window.setTimeout(() => {
-        setExportStatus("idle");
-        setExportMessage(null);
-      }, 2500);
-    } catch (e) {
-      console.error("Export error:", e);
-      setExportStatus("error");
-      setExportMessage(e instanceof Error ? e.message : "Не удалось экспортировать документ.");
-      window.setTimeout(() => {
-        setExportStatus("idle");
-      }, 3500);
-    }
-  };
 
   const handleUploadImage = useCallback(
     async (file: File) => {
@@ -78,25 +41,6 @@ export default function App() {
       return { name, blobUrl };
     },
     [addImage, getImageBlobUrl],
-  );
-
-  const registerImageInserter = useCallback((inserter: ((name: string) => void) | null) => {
-    setInsertImage(() => inserter);
-  }, []);
-
-  const registerEditorAdapter = useCallback((adapter: EditorAdapter | null) => {
-    setEditorAdapter(adapter);
-  }, []);
-
-  const registerSearchOpener = useCallback((opener: ((mode: "search" | "replace") => void) | null) => {
-    setSearchOpener(() => opener);
-  }, []);
-
-  const handleInsertImage = useCallback(
-    (name: string) => {
-      insertImage?.(name);
-    },
-    [insertImage],
   );
 
   const openMarkdownFile = useCallback(
@@ -173,14 +117,11 @@ export default function App() {
         theme={theme}
         onOpenMarkdown={(file) => void openMarkdownFile(file)}
         onSaveMarkdown={handleSaveMarkdown}
-        onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+        onToggleTheme={toggleTheme}
         onOpenSettings={() => setSettingsOpen(true)}
         onExportDocx={handleExport}
         onImagesClick={() => setImagesOpen((open) => !open)}
         onAiClick={() => setAiOpen((open) => !open)}
-        onChangeCase={() => editorAdapter?.changeSelectionCase()}
-        onCollectImages={() => editorAdapter?.insertImageDescriptions()}
-        onSearchClick={() => searchOpener?.("search")}
         imageCount={images.length}
         exportStatus={exportStatus}
       />
@@ -194,10 +135,7 @@ export default function App() {
             settings={settings}
             imageUrls={imageUrls}
             onUploadImage={handleUploadImage}
-            registerImageInserter={registerImageInserter}
-            registerEditorAdapter={registerEditorAdapter}
             onAiContextMenu={handleAiContextMenu}
-            registerSearchOpener={registerSearchOpener}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-gray-500">Загрузка редактора...</div>
@@ -209,7 +147,6 @@ export default function App() {
       {aiContextMenu && (
         <AiContextMenu
           position={aiContextMenu}
-          canGenerate={Boolean(editorAdapter)}
           isRunning={aiGeneration.isRunning}
           onClose={() => setAiContextMenu(null)}
           onGenerateWork={() => runContextGeneration("full")}
@@ -223,7 +160,6 @@ export default function App() {
         onClose={() => setImagesOpen(false)}
         onAddImage={addImage}
         onRemoveImage={removeImage}
-        onInsertImage={handleInsertImage}
       />
 
       <AiPanel
@@ -231,7 +167,6 @@ export default function App() {
         settings={settings}
         state={aiGeneration.state}
         isRunning={aiGeneration.isRunning}
-        editorAdapter={editorAdapter}
         onClose={() => setAiOpen(false)}
         onGenerate={aiGeneration.generate}
         onStop={aiGeneration.stop}
@@ -246,5 +181,13 @@ export default function App() {
         onClose={() => setSettingsOpen(false)}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <EditorProvider>
+      <AppContent />
+    </EditorProvider>
   );
 }

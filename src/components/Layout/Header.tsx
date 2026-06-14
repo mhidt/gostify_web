@@ -16,6 +16,7 @@ import {
   Settings,
 } from "lucide-react";
 import type { ExportStatus } from "@/components/Editor/ExportButton";
+import { useEditorAdapter } from "@/contexts/EditorContext";
 
 interface HeaderProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -28,9 +29,6 @@ interface HeaderProps {
   onExportDocx: () => void;
   onImagesClick: () => void;
   onAiClick: () => void;
-  onChangeCase: () => void;
-  onCollectImages: () => void;
-  onSearchClick: () => void;
   imageCount: number;
   exportStatus: ExportStatus;
 }
@@ -80,12 +78,10 @@ export function Header({
   onExportDocx,
   onImagesClick,
   onAiClick,
-  onChangeCase,
-  onCollectImages,
-  onSearchClick,
   imageCount,
   exportStatus,
 }: HeaderProps) {
+  const { editorAdapter, searchOpener } = useEditorAdapter();
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const fileMenuRef = useRef<HTMLDivElement>(null);
@@ -182,7 +178,7 @@ export function Header({
 
       <div className="flex items-center gap-1">
         <button
-          onClick={onSearchClick}
+          onClick={() => searchOpener?.("search")}
           className="h-8 px-3 rounded text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors inline-flex items-center gap-1.5"
           title="Найти и заменить (Ctrl+F)"
         >
@@ -212,7 +208,7 @@ export function Header({
         </button>
 
         <button
-          onClick={onChangeCase}
+          onClick={() => editorAdapter?.changeSelectionCase()}
           className="h-8 px-3 rounded text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors inline-flex items-center gap-1.5"
         >
           <AArrowDown className="w-5 h-5" />
@@ -220,7 +216,7 @@ export function Header({
         </button>
 
         <button
-          onClick={onCollectImages}
+          onClick={() => editorAdapter?.insertImageDescriptions()}
           className="h-8 px-3 rounded text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors inline-flex items-center gap-1.5"
         >
           <Images className="w-4 h-4" />

@@ -16,6 +16,7 @@ import { normalizeEditorMarkdown } from "@/core/editor/markdown";
 import { switchCase } from "@/core/editor/utils";
 import type { DocxPluginSettings } from "@/core/settings";
 import { SearchPanel, type SearchPanelMode } from "@/components/Editor/SearchPanel";
+import { useEditorRegistration, type SearchPanelMode as ContextSearchPanelMode } from "@/contexts/EditorContext";
 import { editorEnhancementPlugins, setEditorDisplaySettings } from "@/lib/editorEnhancements";
 import { clearSearch, searchPlugin, setSearchQuery } from "@/lib/plugins/searchPlugin";
 import "@milkdown/theme-nord/style.css";
@@ -44,10 +45,7 @@ interface MilkdownEditorProps {
   >;
   imageUrls?: Map<string, string>;
   onUploadImage?: (file: File) => Promise<{ name: string; blobUrl: string }>;
-  registerImageInserter?: (insertImage: ((name: string) => void) | null) => void;
-  registerEditorAdapter?: (adapter: EditorAdapter | null) => void;
   onAiContextMenu?: (position: { x: number; y: number }) => void;
-  registerSearchOpener?: (opener: ((mode: SearchPanelMode) => void) | null) => void;
 }
 
 function escapeRegExp(value: string) {
@@ -96,11 +94,9 @@ function MilkdownEditorInner({
   settings,
   imageUrls = new Map(),
   onUploadImage,
-  registerImageInserter,
-  registerEditorAdapter,
   onAiContextMenu,
-  registerSearchOpener,
 }: MilkdownEditorProps) {
+  const { registerImageInserter, registerEditorAdapter, registerSearchOpener } = useEditorRegistration();
   const onChangeRef = useRef(onChange);
   const imageUrlsRef = useRef(imageUrls);
   const onUploadImageRef = useRef(onUploadImage);
@@ -272,8 +268,6 @@ function MilkdownEditorInner({
   ]);
 
   useEffect(() => {
-    if (!registerImageInserter) return;
-
     registerImageInserter((name) => {
       const editor = getEditorRef.current();
       const blobUrl = imageUrlsRef.current.get(name);
@@ -298,9 +292,7 @@ function MilkdownEditorInner({
   }, [registerImageInserter]);
 
   useEffect(() => {
-    if (!registerSearchOpener) return;
-
-    registerSearchOpener((mode) => {
+    registerSearchOpener((mode: ContextSearchPanelMode) => {
       if (editorView) {
         const selectedText = getSelectedPlainText(editorView);
         if (selectedText) {
@@ -317,8 +309,6 @@ function MilkdownEditorInner({
   }, [registerSearchOpener, editorView]);
 
   useEffect(() => {
-    if (!registerEditorAdapter) return;
-
     const adapter: EditorAdapter = {
       getSelection() {
         const editor = getEditorRef.current();

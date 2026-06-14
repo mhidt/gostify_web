@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { AiGenerationState, useAiGeneration } from "@/hooks/useAiGeneration";
 import type { DocxPluginSettings } from "@/core/settings";
-import type { EditorAdapter, GenerateMode } from "@/core/ai/generator";
+import type { GenerateMode } from "@/core/ai/generator";
+import { useEditorAdapter } from "@/contexts/EditorContext";
 
 interface AiPanelProps {
   open: boolean;
   settings: DocxPluginSettings;
   state: AiGenerationState;
   isRunning: boolean;
-  editorAdapter: EditorAdapter | null;
   onClose: () => void;
   onGenerate: ReturnType<typeof useAiGeneration>["generate"];
   onStop: () => void;
@@ -27,12 +27,12 @@ export function AiPanel({
   settings,
   state,
   isRunning,
-  editorAdapter,
   onClose,
   onGenerate,
   onStop,
   onSetActiveProvider,
 }: AiPanelProps) {
+  const { editorAdapter } = useEditorAdapter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

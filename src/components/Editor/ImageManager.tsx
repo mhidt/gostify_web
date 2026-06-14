@@ -1,5 +1,6 @@
 import type { ChangeEvent } from "react";
 import type { ImageEntry } from "@/hooks/useImages";
+import { useEditorAdapter } from "@/contexts/EditorContext";
 
 interface ImageManagerProps {
   images: ImageEntry[];
@@ -7,7 +8,6 @@ interface ImageManagerProps {
   onClose: () => void;
   onAddImage: (file: File) => Promise<string>;
   onRemoveImage: (name: string) => Promise<void>;
-  onInsertImage: (name: string) => void;
 }
 
 export function ImageManager({
@@ -16,8 +16,8 @@ export function ImageManager({
   onClose,
   onAddImage,
   onRemoveImage,
-  onInsertImage,
 }: ImageManagerProps) {
+  const { insertImage } = useEditorAdapter();
   if (!open) return null;
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +57,7 @@ export function ImageManager({
               <div key={image.name} className="overflow-hidden rounded-md border border-gray-200 bg-gray-50">
                 <button
                   type="button"
-                  onClick={() => onInsertImage(image.name)}
+                  onClick={() => insertImage?.(image.name)}
                   className="block aspect-video w-full bg-white"
                   title={`Вставить ${image.name}`}
                 >
