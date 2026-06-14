@@ -1,5 +1,13 @@
+import { useState, useCallback } from "react";
 import { DocxPluginSettings } from "@/core/settings";
 import { AiSettings } from "@/components/Settings/AiSettings";
+import { FontSection } from "@/components/Settings/FontSection";
+import { ExportSection } from "@/components/Settings/ExportSection";
+import { ImagesSection } from "@/components/Settings/ImagesSection";
+import { MarginsSection } from "@/components/Settings/MarginsSection";
+import { ManageSection } from "@/components/Settings/ManageSection";
+import { Icon } from "@/components/Settings/shared";
+import { Type, FileDown, Image, Ruler, WandSparkles, Settings, X } from "lucide-react";
 
 interface SettingsPanelProps {
   settings: DocxPluginSettings;
@@ -9,119 +17,79 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
+type NavKey = "font" | "export" | "manage" | "images" | "margins" | "ai";
+
+const NAV_INFO: Record<NavKey, { t: string; d: string }> = {
+  font: { t: "Оформление документа", d: "Шрифт, интервалы и заголовки" },
+  export: { t: "Экспорт", d: "Формат и параметры экспорта" },
+  manage: { t: "Управление настройками", d: "Экспорт, импорт и сброс" },
+  images: { t: "Изображения", d: "Параметры изображений и подписей" },
+  margins: { t: "Поля документа", d: "Размеры полей в миллиметрах" },
+  ai: { t: "ИИ генерация", d: "Промты для генерации" },
+};
+
 export function SettingsPanel({ settings, setSettings, resetSettings, open, onClose }: SettingsPanelProps) {
+  const [nav, setNav] = useState<NavKey>("font");
+  const [headingTab, setHeadingTab] = useState<"chapters" | "paragraphs">("chapters");
+
+  const set = useCallback(<K extends keyof DocxPluginSettings>(key: K, value: DocxPluginSettings[K]) => {
+    setSettings({ [key]: value } as Partial<DocxPluginSettings>);
+  }, [setSettings]);
+
   if (!open) return null;
 
-  const set = <K extends keyof DocxPluginSettings>(key: K, value: DocxPluginSettings[K]) => {
-    setSettings({ [key]: value } as Partial<DocxPluginSettings>);
-  };
+  const navBtn = (key: NavKey, icon: React.ReactNode, label: string) => (
+    <button
+      onClick={() => setNav(key)}
+      className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2.5 transition-colors hover:bg-gray-100 ${nav === key ? "bg-blue-50 text-blue-600 font-semibold" : "text-gray-600"}`}
+    >
+      {icon}<span>{label}</span>
+    </button>
+  );
 
   return (
     <div className="fixed inset-0 z-40 flex">
       <div className="fixed inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative z-50 max-h-full w-full overflow-auto bg-white shadow-xl sm:w-96">
-        <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-3">
-          <h2 className="text-lg font-bold">Настройки</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
-        </div>
+      <div className="relative z-50 flex w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden mx-auto my-auto" style={{ height: 590 }}>
+        <nav className="w-52 shrink-0 border-r border-gray-200 bg-gray-50 py-4 px-3 flex flex-col">
+          <h2 className="text-sm font-bold text-gray-900 px-3 mb-3">Настройки</h2>
+          <div className="space-y-0.5">
+            <p className="px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Основные</p>
+            {navBtn("font", <Icon bg="bg-blue-50" text="text-blue-600"><Type className="w-3 h-3" /></Icon>, "Оформление")}
+            {navBtn("export", <Icon bg="bg-emerald-50" text="text-emerald-600"><FileDown className="w-3 h-3" /></Icon>, "Экспорт")}
+            {navBtn("manage", <Icon bg="bg-gray-100" text="text-gray-500"><Settings className="w-3 h-3" /></Icon>, "Управление")}
+          </div>
+          <div className="border-t border-gray-200 mx-3 my-3" />
+          <div className="space-y-0.5 flex-1">
+            <p className="px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Расширенные</p>
+            {navBtn("images", <Icon bg="bg-amber-50" text="text-amber-600"><Image className="w-3 h-3" /></Icon>, "Изображения")}
+            {navBtn("margins", <Icon bg="bg-sky-50" text="text-sky-600"><Ruler className="w-3 h-3" /></Icon>, "Поля")}
+            {navBtn("ai", <Icon bg="bg-purple-50" text="text-purple-600"><WandSparkles className="w-3 h-3" /></Icon>, "ИИ")}
+          </div>
+          <div className="pt-3 px-3 border-t border-gray-200">
+            <button onClick={resetSettings} className="w-full h-8 rounded-lg border border-red-200 text-[11px] font-medium text-red-500 hover:bg-red-50 transition-colors">Сбросить до ГОСТ</button>
+          </div>
+        </nav>
 
-        <div className="p-4 space-y-6">
-          <Section title="Шрифт">
-            <NumberField label="Размер шрифта (пт)" value={settings.fontSize} onChange={(v) => set("fontSize", v)} />
-            <SelectField label="Межстрочный интервал" value={String(settings.lineSpacing)} options={{ "1": "Одинарный", "1.15": "1.15", "1.5": "Полуторный", "2": "Двойной" }} onChange={(v) => set("lineSpacing", Number(v))} />
-            <NumberField label="Абзацный отступ (см)" value={settings.firstLineIndent} onChange={(v) => set("firstLineIndent", v)} step={0.25} />
-          </Section>
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">{NAV_INFO[nav].t}</h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">{NAV_INFO[nav].d}</p>
+            </div>
+            <button onClick={onClose} className="h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"><X className="w-5 h-5" /></button>
+          </div>
 
-          <Section title="Заголовки глав (#)">
-            <SelectField label="Размер шрифта (пт)" value={String(settings.chapterFontSize)} options={{ "14": "14", "16": "16", "18": "18" }} onChange={(v) => set("chapterFontSize", Number(v))} />
-            <ToggleField label="Жирное начертание" value={settings.chapterBold} onChange={(v) => set("chapterBold", v)} />
-            <SelectField label="Выравнивание" value={settings.chapterAlignment} options={{ center: "По центру", left: "По левому краю", justified: "По ширине" }} onChange={(v) => set("chapterAlignment", v)} />
-            <ToggleField label="Слово «глава» перед номером" value={settings.chapterPrefix} onChange={(v) => set("chapterPrefix", v)} />
-            <ToggleField label="Заглавные буквы" value={settings.chapterAllCaps} onChange={(v) => set("chapterAllCaps", v)} />
-            <ToggleField label="Точка после номера" value={settings.chapterDot} onChange={(v) => set("chapterDot", v)} />
-            <ToggleField label="Абзацный отступ" value={settings.chapterIndent} onChange={(v) => set("chapterIndent", v)} />
-          </Section>
-
-          <Section title="Заголовки параграфов (##)">
-            <SelectField label="Размер шрифта (пт)" value={String(settings.paragraphFontSize)} options={{ "14": "14", "16": "16", "18": "18" }} onChange={(v) => set("paragraphFontSize", Number(v))} />
-            <ToggleField label="Жирное начертание" value={settings.paragraphBold} onChange={(v) => set("paragraphBold", v)} />
-            <SelectField label="Выравнивание" value={settings.paragraphAlignment} options={{ center: "По центру", left: "По левому краю", justified: "По ширине" }} onChange={(v) => set("paragraphAlignment", v)} />
-            <ToggleField label="Точка после номера" value={settings.paragraphDot} onChange={(v) => set("paragraphDot", v)} />
-            <ToggleField label="Абзацный отступ" value={settings.paragraphIndent} onChange={(v) => set("paragraphIndent", v)} />
-          </Section>
-
-          <Section title="Изображения">
-            <TextField label="Размер по умолчанию" value={settings.defaultImageSize} onChange={(v) => set("defaultImageSize", v)} hint="Число (px) или процент (80%)" />
-            <ToggleField label="Сокращать «Рисунок»" value={settings.imageShortCaption} onChange={(v) => set("imageShortCaption", v)} />
-            <SelectField label="Разделитель подписей" value={settings.captionSeparator} options={{ dot: ". (точка)", dash: "– (тире)" }} onChange={(v) => set("captionSeparator", v)} />
-            <SelectField label="Нумерация рисунков" value={settings.imageNumbering} options={{ sequential: "Сквозная (1, 2, 3...)", byChapter: "По разделам (1.1, 1.2...)" }} onChange={(v) => set("imageNumbering", v)} />
-          </Section>
-
-          <Section title="Экспорт">
-            <SelectField label="Формат файла" value={settings.saveFormat} options={{ doc: ".doc", docx: ".docx" }} onChange={(v) => set("saveFormat", v)} />
-            <ToggleField label="Ссылки в конце предложения" value={settings.linksAtEndOfSentence} onChange={(v) => set("linksAtEndOfSentence", v)} />
-            <ToggleField label="Без списка литературы" value={settings.skipBibliography} onChange={(v) => set("skipBibliography", v)} />
-          </Section>
-
-          <AiSettings settings={settings} setSettings={setSettings} />
-
-          <button
-            onClick={resetSettings}
-            className="w-full rounded-md border border-red-300 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-          >
-            Сбросить к стандартам ГОСТ
-          </button>
+          <div className="flex-1 overflow-y-auto px-6 py-5 thin-scroll">
+            {nav === "font" && <FontSection settings={settings} set={set} headingTab={headingTab} setHeadingTab={setHeadingTab} />}
+            {nav === "export" && <ExportSection settings={settings} set={set} />}
+            {nav === "images" && <ImagesSection settings={settings} set={set} />}
+            {nav === "margins" && <MarginsSection settings={settings} set={set} />}
+            {nav === "ai" && <AiSettings settings={settings} setSettings={setSettings} />}
+            {nav === "manage" && <ManageSection settings={settings} setSettings={setSettings} resetSettings={resetSettings} />}
+          </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">{title}</h3>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-function NumberField({ label, value, onChange, step = 1 }: { label: string; value: number; onChange: (v: number) => void; step?: number }) {
-  return (
-    <label className="flex items-center justify-between text-sm">
-      <span className="text-gray-600">{label}</span>
-      <input type="number" value={value} step={step} onChange={(e) => onChange(Number(e.target.value))} className="w-20 rounded border border-gray-300 px-2 py-1 text-right text-sm" />
-    </label>
-  );
-}
-
-function ToggleField({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex items-center justify-between text-sm">
-      <span className="text-gray-600">{label}</span>
-      <button onClick={() => onChange(!value)} className={`relative h-5 w-9 rounded-full transition-colors ${value ? "bg-blue-600" : "bg-gray-300"}`}>
-        <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${value ? "translate-x-4" : ""}`} />
-      </button>
-    </label>
-  );
-}
-
-function SelectField({ label, value, options, onChange }: { label: string; value: string; options: Record<string, string>; onChange: (v: string) => void }) {
-  return (
-    <label className="flex items-center justify-between text-sm">
-      <span className="text-gray-600">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="rounded border border-gray-300 px-2 py-1 text-sm">
-        {Object.entries(options).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-      </select>
-    </label>
-  );
-}
-
-function TextField({ label, value, onChange, hint }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
-  return (
-    <label className="block text-sm">
-      <span className="text-gray-600">{label}</span>
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={hint} className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm" />
-    </label>
   );
 }

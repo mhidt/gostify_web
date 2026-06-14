@@ -27,9 +27,11 @@ export interface DocxPluginSettings {
   chapterDot: boolean;
   saveFormat: string;
   defaultImageSize: string;
-  imageShortCaption: boolean;
   captionSeparator: string;
+  imageShortCaption: boolean;
   imageNumbering: string;
+  tableNumbering: string;
+  listingNumbering: string;
   linksAtEndOfSentence: boolean;
   skipBibliography: boolean;
   aiProviders: AiProviderConfig[];
@@ -60,9 +62,11 @@ export const DEFAULT_SETTINGS: DocxPluginSettings = {
   chapterDot: true,
   saveFormat: "doc",
   defaultImageSize: "80%",
-  imageShortCaption: false,
   captionSeparator: "dot",
+  imageShortCaption: false,
   imageNumbering: "sequential",
+  tableNumbering: "sequential",
+  listingNumbering: "sequential",
   linksAtEndOfSentence: false,
   skipBibliography: false,
   aiProviders: [
