@@ -12,6 +12,33 @@ export default {
 
     const url = new URL(request.url);
 
+    // Source proxy: GET /api/source-proxy?url=...
+    if (url.pathname === "/api/source-proxy" && request.method === "GET") {
+      const target = url.searchParams.get("url");
+      if (!target) return new Response("Missing url param", { status: 400 });
+
+      try {
+        const response = await fetch(target, {
+          headers: {
+            Accept: "text/html,application/xhtml+xml,*/*",
+            "User-Agent": "Mozilla/5.0",
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+
+        const responseHeaders = new Headers(response.headers);
+        responseHeaders.set("Access-Control-Allow-Origin", "*");
+        responseHeaders.set("Cache-Control", "no-store");
+
+        return new Response(response.body, {
+          status: response.status,
+          headers: responseHeaders,
+        });
+      } catch {
+        return new Response("Source fetch failed", { status: 502, headers: corsHeaders });
+      }
+    }
+
     // Image proxy: GET /api/image-proxy?url=...
     if (url.pathname === "/api/image-proxy" && request.method === "GET") {
       const target = url.searchParams.get("url");

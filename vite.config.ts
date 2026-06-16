@@ -57,6 +57,64 @@ function aiStreamProxy() {
   }
 }
 
+function sourceProxy() {
+  return {
+    name: 'gostify-source-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/source-proxy', (req, res) => {
+        const requestUrl = new URL(req.url || '', 'http://localhost')
+        const target = requestUrl.searchParams.get('url')
+
+        if (!target) {
+          res.statusCode = 400
+          res.end('Missing url param')
+          return
+        }
+
+        const parsedTarget = new URL(target)
+        const client = parsedTarget.protocol === 'https:' ? https : http
+
+        const proxyReq = client.request(
+          {
+            protocol: parsedTarget.protocol,
+            hostname: parsedTarget.hostname,
+            port: parsedTarget.port || (parsedTarget.protocol === 'https:' ? 443 : 80),
+            path: parsedTarget.pathname + parsedTarget.search,
+            method: 'GET',
+            headers: {
+              'Accept': 'text/html,application/xhtml+xml,*/*',
+              'User-Agent': 'Mozilla/5.0',
+            },
+          },
+          (proxyRes) => {
+            res.statusCode = proxyRes.statusCode || 500
+            const contentType = proxyRes.headers['content-type']
+            if (contentType) res.setHeader('Content-Type', contentType)
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.setHeader('Cache-Control', 'no-store')
+            proxyRes.pipe(res)
+          },
+        )
+
+        proxyReq.on('error', (error) => {
+          if (!res.headersSent) res.statusCode = 502
+          res.end(error.message)
+        })
+
+        proxyReq.setTimeout(10000, () => {
+          proxyReq.destroy()
+          if (!res.headersSent) {
+            res.statusCode = 504
+            res.end('Source fetch timeout')
+          }
+        })
+
+        proxyReq.end()
+      })
+    },
+  }
+}
+
 function imageProxy() {
   return {
     name: 'gostify-image-proxy',
@@ -110,19 +168,10 @@ function imageProxy() {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), aiStreamProxy(), imageProxy()],
+  plugins: [react(), tailwindcss(), aiStreamProxy(), sourceProxy(), imageProxy()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    proxy: {
-      '/api/proxy': {
-        target: 'https://corsproxy.io/',
-        rewrite: (requestPath) => requestPath.replace(/^\/api\/proxy/, '/'),
-        changeOrigin: true,
-      },
     },
   },
   build: {
