@@ -4,6 +4,7 @@ import {
 } from "@/lib/plugins/bibliographyPlugin";
 import { changeCasePlugin } from "@/lib/plugins/changeCasePlugin";
 import { codeBlockMetaPlugin } from "@/lib/plugins/codeBlockMetaPlugin";
+import { codeBlockNodeViewPlugin } from "@/lib/plugins/codeBlockNodeViewPlugin";
 import {
 	elementPlaceholderPlugin,
 	imagePlaceholderPlugin,
@@ -11,7 +12,6 @@ import {
 import { headingFormattingPlugin } from "@/lib/plugins/headingFormattingPlugin";
 import { headingMarkerPlugin } from "@/lib/plugins/headingMarkerPlugin";
 import { imageCaptionAlignmentPlugin } from "@/lib/plugins/imageCaptionAlignmentPlugin";
-import { listingCaptionPlugin } from "@/lib/plugins/listingCaptionPlugin";
 import {
 	pageBreakDisplayPlugin,
 	pageBreakPlugin,
@@ -28,12 +28,12 @@ export {
 	bibliographyPlugin,
 	changeCasePlugin,
 	codeBlockMetaPlugin,
+	codeBlockNodeViewPlugin,
 	elementPlaceholderPlugin,
 	headingFormattingPlugin,
 	headingMarkerPlugin,
 	imageCaptionAlignmentPlugin,
 	imagePlaceholderPlugin,
-	listingCaptionPlugin,
 	pageBreakDisplayPlugin,
 	pageBreakPlugin,
 	resizableImagePlugin,
@@ -45,6 +45,7 @@ export {
 
 export const editorEnhancementPlugins = [
 	...codeBlockMetaPlugin,
+	codeBlockNodeViewPlugin,
 	trimDoubleClickSelectionPlugin,
 	smartQuotesPlugin,
 	headingMarkerPlugin,
@@ -56,7 +57,6 @@ export const editorEnhancementPlugins = [
 	resizableImagePlugin,
 	elementPlaceholderPlugin,
 	imageCaptionAlignmentPlugin,
-	listingCaptionPlugin,
 	tableCaptionPlugin,
 	bibliographyPlugin,
 	bibliographyDecorationPlugin,

@@ -311,12 +311,123 @@ body {
       font-size: 0.9em;
     }
 
-    pre {
-      background: #1e293b;
-      color: #e2e8f0;
+    .code-block-wrapper code {
+      background: none;
+      border-radius: 0;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    .code-block-wrapper {
       border-radius: 8px;
+      overflow: hidden;
+      margin: 0.5em 0;
+      border: 1px solid var(--border);
+    }
+
+    .code-block-editing code,
+    .code-block-highlighted,
+    .code-block-highlighted * {
+      text-decoration-line: none !important;
+    }
+
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
+      font-size: 0.8em;
+      font-family: system-ui, sans-serif;
+      background: transparent;
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+
+    .code-block-lang {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+    }
+
+    .code-block-lang-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .code-block-lang-caption {
+      color: var(--text-secondary);
+    }
+
+    .code-block-copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.85em;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      font-family: inherit;
+    }
+
+    .code-block-copy-btn:hover {
+      background: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .code-block-body {
+      position: relative;
+    }
+
+    .code-block-editing {
+      margin: 0;
+      padding: 1em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.9em;
+      line-height: 1.5;
+      tab-size: 4;
+      white-space: pre;
+      overflow-x: auto;
+      background: transparent;
+      color: var(--text-primary);
+    }
+
+    .code-block-editing code {
+      color: inherit;
+      padding: 0;
+      font: inherit;
+    }
+
+    .code-block-highlighted {
+      margin: 0;
       padding: 1em;
       overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.9em;
+      line-height: 1.5;
+    }
+
+    .code-block-highlighted .shiki {
+      margin: 0;
+      padding: 0;
+      background: transparent !important;
+      border-radius: 0;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+    }
+
+    .code-block-highlighted-state .code-block-header {
+      background: transparent;
+    }
+
+    .dark .code-block-highlighted-state .code-block-header {
+      background: transparent;
+    }
+
+    .dark .code-block-copy-btn:hover {
+      background: var(--accent);
     }
 
     pre.listing-code-block {
@@ -329,7 +440,6 @@ body {
       padding: 0.8em 1em;
     }
 
-    pre code,
     pre.listing-code-block code {
       background: none;
       color: inherit;
