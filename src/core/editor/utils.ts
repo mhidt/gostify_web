@@ -41,8 +41,10 @@ export function parseImageTag(text: string): { fileName: string; url?: string; r
   if (!match) return { fileName: "" };
 
   const alt = match[1] ?? "";
-  const url = match[2] ?? "";
-  const fileName = alt || url.split("/").pop() || "image.png";
+  let url = match[2] ?? "";
+  url = url.split(/\s+/)[0]!.trim();
+  url = url.replace(/\\([\\`*_{}[\]()#+\-.!&|~<>])/g, "$1");
+  const fileName = alt || url.split("/").pop()?.split(/[?#]/)[0] || "image.png";
   return { fileName, url };
 }
 

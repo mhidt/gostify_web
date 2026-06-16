@@ -7,10 +7,37 @@ const MM_TO_PX = 3.78;
 const A4_WIDTH_MM = 210;
 
 const imageBufferCache = new Map<string, ArrayBuffer>();
+const imageContentTypeCache = new Map<string, string | null>();
 const imageDimCache = new Map<string, { width: number; height: number }>();
+
+const VALID_IMAGE_TYPES = ["png", "jpg", "jpeg", "gif", "bmp", "svg", "webp"];
+
+const MIME_TO_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/bmp": "bmp",
+  "image/svg+xml": "svg",
+  "image/webp": "webp",
+};
+
+function resolveImageType(urlOrFileName: string, contentType: string | null): string {
+  const pathPart = urlOrFileName.split(/[?#]/)[0]!;
+  const ext = pathPart.split(".").pop()!;
+  if (VALID_IMAGE_TYPES.includes(ext.toLowerCase())) return ext.toLowerCase() === "jpeg" ? "jpg" : ext.toLowerCase();
+
+  if (contentType) {
+    const mime = contentType.split(";")[0]!.trim();
+    const mapped = MIME_TO_EXT[mime];
+    if (mapped) return mapped;
+  }
+
+  return "png";
+}
 
 export function clearImageCache(): void {
   imageBufferCache.clear();
+  imageContentTypeCache.clear();
   imageDimCache.clear();
 }
 
@@ -30,7 +57,8 @@ export async function renderImage(
       if (url) {
         const fetched = await fetchImageBuffer(url);
         if (!fetched) return null;
-        buffer = fetched;
+        buffer = fetched.buffer;
+        imageContentTypeCache.set(cacheKey, fetched.contentType);
       } else {
         const fetched = await imageProvider.getImageBuffer(fileName);
         if (!fetched) {
@@ -42,10 +70,10 @@ export async function renderImage(
       imageBufferCache.set(cacheKey, buffer);
     }
 
-    const ext = (url || fileName).split(/[?#]/)[0]!.split(".").pop() || "png";
+    const type = resolveImageType(url || fileName, imageContentTypeCache.get(cacheKey) ?? null);
     return new ImageRun({
       data: buffer,
-      type: ext as any,
+      type: type as any,
       transformation: await getImageDimensions(cacheKey, url ? null : imageProvider, requestedWidth, settings),
     });
   } catch (e) {
@@ -108,18 +136,20 @@ function getDimensionsFromBuffer(buffer: ArrayBuffer): Promise<{ width: number; 
   });
 }
 
-async function fetchImageBuffer(imageUrl: string): Promise<ArrayBuffer | null> {
-  // 1. Server-side proxy (bypasses CORS reliably)
+async function fetchImageBuffer(imageUrl: string): Promise<{ buffer: ArrayBuffer; contentType: string | null } | null> {
   try {
     const proxyUrl = "/api/image-proxy?url=" + encodeURIComponent(imageUrl);
     const response = await fetch(proxyUrl);
-    if (response.ok) return response.arrayBuffer();
+    if (response.ok) {
+      return { buffer: await response.arrayBuffer(), contentType: response.headers.get("Content-Type") };
+    }
   } catch { /* proxy not available, try direct */ }
 
-  // 2. Direct fetch (works when server sends CORS headers)
   try {
     const response = await fetch(imageUrl);
-    if (response.ok) return response.arrayBuffer();
+    if (response.ok) {
+      return { buffer: await response.arrayBuffer(), contentType: response.headers.get("Content-Type") };
+    }
   } catch { /* CORS or network error */ }
 
   console.warn("Не удалось скачать изображение " + imageUrl);
